@@ -30,7 +30,7 @@ START_TIME=$(date +%s)
 if [ "$CLEAN_BUILD" = true ]; then
     echo ""
     echo "🧹 Cleaning previous build..."
-    CLEAN_PATHS=("./staging" "./packages" "./FFmpeg.AutoGen.Bindings/generated" "./FFmpeg.AutoGen.Redist/runtimes")
+    CLEAN_PATHS=("./FFmpeg" "./packages" "./FFmpeg.AutoGen.Abstractions/generated" "./FFmpeg.AutoGen.Bindings.StaticallyLinked/generated" "./FFmpeg.AutoGen.Bindings.DynamicallyLinked/generated" "./FFmpeg.AutoGen.Bindings.DynamicallyLoaded/generated")
     for path in "${CLEAN_PATHS[@]}"; do
         if [ -d "$path" ]; then
             rm -rf "$path"
@@ -42,17 +42,17 @@ fi
 # Step 1: Extract FFmpeg
 echo ""
 echo "🔸 Step 1: Extracting FFmpeg archive"
-./build/extract-ffmpeg.sh "$FFMPEG_TAR" "./staging"
+./build/extract-ffmpeg.sh "$FFMPEG_TAR" "./FFmpeg"
 
 # Step 2: Generate bindings
 echo ""
 echo "🔸 Step 2: Generating C# bindings"
-./build/generate-bindings.sh "./staging/include" "./staging/bin"
+./build/generate-bindings.sh "./FFmpeg/include" "./FFmpeg/bin"
 
 # Step 3: Create packages
 echo ""
 echo "🔸 Step 3: Creating NuGet packages"
-./build/create-packages.sh "./staging"
+./build/create-packages.sh "./FFmpeg"
 
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))

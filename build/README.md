@@ -31,17 +31,17 @@ This directory contains the automated build system for FFmpeg.AutoGen that proce
 
 #### 1. Extract FFmpeg Archive
 ```powershell
-.\build\extract-ffmpeg.ps1 -FFmpegTar "ffmpeg-7.1.0.tar" -OutputPath ".\staging"
+.\build\extract-ffmpeg.ps1 -FFmpegTar "ffmpeg-7.1.0.tar" -OutputPath ".\FFmpeg"
 ```
 
 #### 2. Generate C# Bindings
 ```powershell
-.\build\generate-bindings.ps1 -HeadersPath ".\staging\include" -BinariesPath ".\staging\bin"
+.\build\generate-bindings.ps1 -HeadersPath ".\FFmpeg\include" -BinariesPath ".\FFmpeg\bin"
 ```
 
 #### 3. Create NuGet Packages
 ```powershell
-.\build\create-packages.ps1 -StagingPath ".\staging"
+.\build\create-packages.ps1 -StagingPath ".\FFmpeg"
 ```
 
 ## Linux/macOS Usage (Bash)
@@ -59,17 +59,17 @@ This directory contains the automated build system for FFmpeg.AutoGen that proce
 
 #### 1. Extract FFmpeg Archive
 ```bash
-./build/extract-ffmpeg.sh ffmpeg-7.1.0.tar ./staging
+./build/extract-ffmpeg.sh ffmpeg-7.1.0.tar ./FFmpeg
 ```
 
 #### 2. Generate C# Bindings
 ```bash
-./build/generate-bindings.sh ./staging/include ./staging/bin
+./build/generate-bindings.sh ./FFmpeg/include ./FFmpeg/bin
 ```
 
 #### 3. Create NuGet Packages
 ```bash
-./build/create-packages.sh ./staging
+./build/create-packages.sh ./FFmpeg
 ```
 
 ## Build Outputs
@@ -167,7 +167,7 @@ chmod +x build/*.sh
 ```
 Input: FFmpeg tar archive
    ↓
-[extract-ffmpeg] → ./staging/
+[extract-ffmpeg] → ./FFmpeg/
    ↓
 [generate-bindings] → ./FFmpeg.AutoGen.Bindings/generated/
    ↓

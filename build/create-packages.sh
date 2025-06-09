@@ -4,7 +4,7 @@ set -e
 # Create FFmpeg.AutoGen NuGet packages
 # Usage: ./create-packages.sh [staging_path] [configuration] [output_path]
 
-STAGING_PATH="${1:-./staging}"
+STAGING_PATH="${1:-./FFmpeg}"
 CONFIGURATION="${2:-Release}"
 OUTPUT_PATH="${3:-./packages}"
 
@@ -19,7 +19,7 @@ REDIST_RUNTIME_PATH="./FFmpeg.AutoGen.Redist/runtimes/win-x64/native"
 
 mkdir -p "$REDIST_RUNTIME_PATH"
 
-# Copy DLLs from staging
+# Copy DLLs from FFmpeg folder
 BIN_PATH="$STAGING_PATH/bin"
 if [ -d "$BIN_PATH" ]; then
     cp "$BIN_PATH"/*.dll "$REDIST_RUNTIME_PATH" 2>/dev/null || true

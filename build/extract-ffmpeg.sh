@@ -5,7 +5,7 @@ set -e
 # Usage: ./extract-ffmpeg.sh <ffmpeg_tar> [output_path]
 
 FFMPEG_TAR="$1"
-OUTPUT_PATH="${2:-./staging}"
+OUTPUT_PATH="${2:-./FFmpeg}"
 
 if [ -z "$FFMPEG_TAR" ]; then
     echo "❌ Usage: $0 <ffmpeg_tar> [output_path]"

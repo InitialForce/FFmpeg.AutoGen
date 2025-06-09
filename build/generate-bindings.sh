@@ -4,8 +4,8 @@ set -e
 # Generate FFmpeg bindings using the CppSharpUnsafeGenerator
 # Usage: ./generate-bindings.sh <headers_path> <binaries_path> [output_path] [namespace]
 
-HEADERS_PATH="${1:-./staging/include}"
-BINARIES_PATH="${2:-./staging/bin}"
+HEADERS_PATH="${1:-./FFmpeg/include}"
+BINARIES_PATH="${2:-./FFmpeg/bin}"
 OUTPUT_PATH="${3:-./FFmpeg.AutoGen.Bindings/generated}"
 NAMESPACE="${4:-FFmpeg.AutoGen}"
 
