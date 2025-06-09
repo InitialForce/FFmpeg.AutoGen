@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>FFmpeg.AutoGen.Redist</PackageId>
+    <Title>FFmpeg AutoGen Redistributable Libraries</Title>
+    <Authors>Ruslan Balanukhin</Authors>
+    <Description>FFmpeg native libraries for Windows, Linux, and macOS. This package contains only the native libraries, no C# bindings.</Description>
+    <PackageTags>ffmpeg;native;libraries;redist;video;audio;codec</PackageTags>
+    <PackageProjectUrl>https://github.com/Ruslan-B/FFmpeg.AutoGen</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Ruslan-B/FFmpeg.AutoGen</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NoWarn>NU5128</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Include native libraries for all supported platforms -->
+    <None Include="runtimes/**/*" Pack="true" PackagePath="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
