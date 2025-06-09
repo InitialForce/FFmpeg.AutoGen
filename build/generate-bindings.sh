@@ -1,15 +1,14 @@
 #!/bin/bash
 set -e
 
-# Generate FFmpeg bindings using the CppSharpUnsafeGenerator
-# Usage: ./generate-bindings.sh <headers_path> <binaries_path> [output_path] [namespace]
+# Generate FFmpeg bindings for all 4 binding projects
+# Usage: ./generate-bindings.sh [headers_path] [binaries_path] [namespace]
 
 HEADERS_PATH="${1:-./FFmpeg/include}"
 BINARIES_PATH="${2:-./FFmpeg/bin}"
-OUTPUT_PATH="${3:-./FFmpeg.AutoGen.Bindings/generated}"
-NAMESPACE="${4:-FFmpeg.AutoGen}"
+NAMESPACE="${3:-FFmpeg.AutoGen}"
 
-echo "🔄 Generating FFmpeg bindings..."
+echo "🔄 Generating FFmpeg bindings for all projects..."
 
 # Verify input paths
 if [ ! -d "$HEADERS_PATH" ]; then
@@ -22,12 +21,8 @@ if [ ! -d "$BINARIES_PATH" ]; then
     exit 1
 fi
 
-# Create output directory
-mkdir -p "$OUTPUT_PATH"
-
 echo "📂 Headers:   $HEADERS_PATH"
 echo "📂 Binaries:  $BINARIES_PATH"
-echo "📂 Output:    $OUTPUT_PATH"
 echo "📦 Namespace: $NAMESPACE"
 
 # Build generator if needed
@@ -41,80 +36,125 @@ if [ $? -ne 0 ]; then
 fi
 cd ..
 
-# Run generator
-echo "⚡ Running generator..."
+# Define the 4 binding projects
+declare -A BINDING_PROJECTS
+BINDING_PROJECTS[StaticallyLinked]="./FFmpeg.AutoGen.Bindings.StaticallyLinked --staticallyLinked"
+BINDING_PROJECTS[DynamicallyLinked]="./FFmpeg.AutoGen.Bindings.DynamicallyLinked --dynamicallyLinked"
+BINDING_PROJECTS[DynamicallyLoaded]="./FFmpeg.AutoGen.Bindings.DynamicallyLoaded --dynamicallyLoaded"
+BINDING_PROJECTS[DllImport]="./FFmpeg.AutoGen.Bindings.DllImport --dllImport"
+
+# Generate bindings for each project
+for project_name in "${!BINDING_PROJECTS[@]}"; do
+    echo ""
+    echo "🔸 Generating bindings for $project_name..."
+
+    # Parse project path and args
+    project_info="${BINDING_PROJECTS[$project_name]}"
+    project_path=$(echo "$project_info" | cut -d' ' -f1)
+    project_args=$(echo "$project_info" | cut -d' ' -f2-)
+
+    output_path="$project_path/generated"
+
+    # Create output directory
+    mkdir -p "$output_path"
+
+    # Run generator with project-specific arguments
+    echo "   Running generator for $project_name..."
+    dotnet run --project ./FFmpeg.AutoGen.CppSharpUnsafeGenerator --configuration Release -- \
+        --namespace "$NAMESPACE" \
+        --headers "$HEADERS_PATH" \
+        --bin "$BINARIES_PATH" \
+        --output "$output_path" \
+        $project_args
+
+    if [ $? -ne 0 ]; then
+        echo "❌ Code generation failed for $project_name"
+        exit 1
+    fi
+
+    # Show generated files for this project
+    if [ -d "$output_path" ]; then
+        file_count=$(find "$output_path" -name "*.cs" -type f | wc -l)
+        echo "   Generated $file_count files for $project_name"
+        for file in "$output_path"/*.cs; do
+            if [ -f "$file" ]; then
+                size=$(du -h "$file" | cut -f1)
+                echo "     • $(basename "$file") ($size)"
+            fi
+        done
+    fi
+done
+
+# Generate shared abstractions
+echo ""
+echo "🔸 Generating shared abstractions..."
+abstractions_path="./FFmpeg.AutoGen.Abstractions/generated"
+
+mkdir -p "$abstractions_path"
+
+echo "   Running generator for abstractions..."
 dotnet run --project ./FFmpeg.AutoGen.CppSharpUnsafeGenerator --configuration Release -- \
     --namespace "$NAMESPACE" \
     --headers "$HEADERS_PATH" \
     --bin "$BINARIES_PATH" \
-    --output "$OUTPUT_PATH"
+    --output "$abstractions_path" \
+    --abstractionsOnly
 
 if [ $? -ne 0 ]; then
-    echo "❌ Code generation failed"
+    echo "❌ Abstractions generation failed"
     exit 1
 fi
 
-# Copy required support files to bindings project
+# Show abstractions files
+if [ -d "$abstractions_path" ]; then
+    file_count=$(find "$abstractions_path" -name "*.cs" -type f | wc -l)
+    echo "   Generated $file_count abstraction files"
+fi
+
+# Build all projects
 echo ""
-echo "📋 Setting up bindings project..."
+echo "🔨 Building all binding projects..."
 
-BINDINGS_DIR="./FFmpeg.AutoGen.Bindings"
-BINDINGS_GEN_DIR="$BINDINGS_DIR/generated"
-
-# Copy core support files from legacy project
-SUPPORT_FILES=(
-    "ConstCharPtrMarshaler.cs"
-    "UTF8Marshaler.cs"
-    "IFixedArray.cs"
-    "FunctionResolverBase.cs"
-    "FunctionResolverFactory.cs"
-    "IFunctionResolver.cs"
+ALL_PROJECTS=(
+    "./FFmpeg.AutoGen.Abstractions"
+    "./FFmpeg.AutoGen.Bindings.StaticallyLinked"
+    "./FFmpeg.AutoGen.Bindings.DynamicallyLinked"
+    "./FFmpeg.AutoGen.Bindings.DynamicallyLoaded"
+    "./FFmpeg.AutoGen.Bindings.DllImport"
 )
 
-for file in "${SUPPORT_FILES[@]}"; do
-    source_path="./FFmpeg.AutoGen/$file"
-    dest_path="$BINDINGS_DIR/$file"
+for project_path in "${ALL_PROJECTS[@]}"; do
+    project_name=$(basename "$project_path")
+    echo "   Building $project_name..."
 
-    if [ -f "$source_path" ]; then
-        cp -f "$source_path" "$dest_path"
-        echo "   Copied: $file"
+    cd "$project_path"
+    dotnet build --configuration Release --verbosity minimal
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to build $project_name"
+        exit 1
+    fi
+    cd - > /dev/null
+done
+
+echo ""
+echo "✅ All bindings generated and built successfully!"
+
+# Summary
+echo ""
+echo "📊 Generation summary:"
+for project_name in "${!BINDING_PROJECTS[@]}"; do
+    project_info="${BINDING_PROJECTS[$project_name]}"
+    project_path=$(echo "$project_info" | cut -d' ' -f1)
+    output_path="$project_path/generated"
+
+    if [ -d "$output_path" ]; then
+        file_count=$(find "$output_path" -name "*.cs" -type f | wc -l)
+        echo "   $project_name: $file_count files"
     fi
 done
 
-# Copy Native directory
-NATIVE_SOURCE_DIR="./FFmpeg.AutoGen/Native"
-NATIVE_DEST_DIR="$BINDINGS_DIR/Native"
-
-if [ -d "$NATIVE_SOURCE_DIR" ]; then
-    rm -rf "$NATIVE_DEST_DIR"
-    cp -r "$NATIVE_SOURCE_DIR" "$NATIVE_DEST_DIR"
-    echo "   Copied: Native directory"
+abstractions_file_count=0
+if [ -d "$abstractions_path" ]; then
+    abstractions_file_count=$(find "$abstractions_path" -name "*.cs" -type f | wc -l)
 fi
-
-# Files are now generated directly to the unified Bindings project
-
-echo "✅ Bindings generation completed successfully"
-
-# Show generated files
-echo ""
-echo "📋 Generated files:"
-if [ -d "$BINDINGS_GEN_DIR" ]; then
-    for file in "$BINDINGS_GEN_DIR"/*.cs; do
-        if [ -f "$file" ]; then
-            size=$(du -h "$file" | cut -f1)
-            echo "   $(basename "$file") ($size)"
-        fi
-    done
-fi
-
-# Build the generated bindings project
-echo ""
-echo "🔨 Building bindings project..."
-cd "$BINDINGS_DIR"
-dotnet build --configuration Release --verbosity minimal
-if [ $? -ne 0 ]; then
-    echo "❌ Failed to build bindings project"
-    exit 1
-fi
-echo "✅ Bindings project built successfully"
-cd ..
+echo "   Abstractions: $abstractions_file_count files"

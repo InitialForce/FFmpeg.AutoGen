@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 # Create FFmpeg.AutoGen NuGet packages for all projects
 # Usage: .\create-packages.ps1 [-StagingPath <staging_path>] [-Configuration <configuration>] [-OutputPath <output_path>]
 
-Write-Host "🔄 Creating NuGet packages for all projects..." -ForegroundColor Blue
+Write-Host "Creating NuGet packages for all projects..." -ForegroundColor Blue
 
 # Create output directory
 if (-not (Test-Path $OutputPath)) {
@@ -38,16 +38,21 @@ $PackageProjects = @(
         Name = "FFmpeg.AutoGen.Bindings.DynamicallyLoaded"
         Path = ".\FFmpeg.AutoGen.Bindings.DynamicallyLoaded\FFmpeg.AutoGen.Bindings.DynamicallyLoaded.csproj"
         Description = "Dynamically loaded FFmpeg bindings"
+    },
+    @{
+        Name = "FFmpeg.AutoGen.Bindings.DllImport"
+        Path = ".\FFmpeg.AutoGen.Bindings.DllImport\FFmpeg.AutoGen.Bindings.DllImport.csproj"
+        Description = "DllImport-based FFmpeg bindings"
     }
 )
 
 # Build each package
 foreach ($project in $PackageProjects) {
     Write-Host ""
-    Write-Host "🔸 Building $($project.Name)..." -ForegroundColor Cyan
+    Write-Host "Building $($project.Name)..." -ForegroundColor Cyan
 
     if (-not (Test-Path $project.Path)) {
-        Write-Host "❌ Project file not found: $($project.Path)" -ForegroundColor Red
+        Write-Host "Project file not found: $($project.Path)" -ForegroundColor Red
         exit 1
     }
 
@@ -64,18 +69,18 @@ foreach ($project in $PackageProjects) {
 
     & dotnet @packArgs
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Failed to build $($project.Name) package" -ForegroundColor Red
+        Write-Host "Failed to build $($project.Name) package" -ForegroundColor Red
         exit 1
     }
 
-    Write-Host "   ✅ $($project.Name) package created successfully"
+    Write-Host "   $($project.Name) package created successfully"
 }
 
 # Also create FFmpeg.AutoGen.Redist package if it exists
 $redistProject = ".\FFmpeg.AutoGen.Redist\FFmpeg.AutoGen.Redist.csproj"
 if (Test-Path $redistProject) {
     Write-Host ""
-    Write-Host "🔸 Building FFmpeg.AutoGen.Redist..." -ForegroundColor Cyan
+    Write-Host "Building FFmpeg.AutoGen.Redist..." -ForegroundColor Cyan
 
     # Copy native libraries to redist project if they exist
     $redistRuntimePath = ".\FFmpeg.AutoGen.Redist\runtimes\win-x64\native"
@@ -92,10 +97,10 @@ if (Test-Path $redistProject) {
             $dlls | Copy-Item -Destination $redistRuntimePath -Force
             Write-Host "   Copied $($dlls.Count) DLLs to redist package"
         } else {
-            Write-Host "   ⚠️  No DLL files found at $binPath - using existing libraries" -ForegroundColor Yellow
+            Write-Host "   No DLL files found at $binPath - using existing libraries" -ForegroundColor Yellow
         }
     } else {
-        Write-Host "   ⚠️  No binaries found at $binPath - using existing libraries" -ForegroundColor Yellow
+        Write-Host "   No binaries found at $binPath - using existing libraries" -ForegroundColor Yellow
     }
 
     $redistArgs = @(
@@ -111,19 +116,19 @@ if (Test-Path $redistProject) {
 
     & dotnet @redistArgs
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Failed to build FFmpeg.AutoGen.Redist package" -ForegroundColor Red
+        Write-Host "Failed to build FFmpeg.AutoGen.Redist package" -ForegroundColor Red
         exit 1
     }
 
-    Write-Host "   ✅ FFmpeg.AutoGen.Redist package created successfully"
+    Write-Host "   FFmpeg.AutoGen.Redist package created successfully"
 }
 
 Write-Host ""
-Write-Host "✅ All packages created successfully!" -ForegroundColor Green
+Write-Host "All packages created successfully!" -ForegroundColor Green
 
 # Show created packages
 Write-Host ""
-Write-Host "📦 Created packages:" -ForegroundColor Blue
+Write-Host "Created packages:" -ForegroundColor Blue
 $packages = Get-ChildItem -Path $OutputPath -Filter "*.nupkg" -ErrorAction SilentlyContinue
 if ($packages.Count -eq 0) {
     Write-Host "   No packages found in $OutputPath" -ForegroundColor Yellow
@@ -131,16 +136,17 @@ if ($packages.Count -eq 0) {
     foreach ($package in $packages) {
         $size = [Math]::Round($package.Length / 1MB, 1)
         $sizeUnit = if ($size -gt 1) { "$($size)MB" } else { "$([Math]::Round($package.Length / 1KB, 0))KB" }
-        Write-Host "   • $($package.Name) ($sizeUnit)"
+        Write-Host "   $($package.Name) ($sizeUnit)"
     }
 }
 
 Write-Host ""
-Write-Host "🎯 Package usage examples:" -ForegroundColor Green
-Write-Host "   Abstractions:        <PackageReference Include=`"FFmpeg.AutoGen.Abstractions`" Version=`"7.1.1`" />"
-Write-Host "   Statically Linked:   <PackageReference Include=`"FFmpeg.AutoGen.Bindings.StaticallyLinked`" Version=`"7.1.1`" />"
-Write-Host "   Dynamically Linked:  <PackageReference Include=`"FFmpeg.AutoGen.Bindings.DynamicallyLinked`" Version=`"7.1.1`" />"
-Write-Host "   Dynamically Loaded:  <PackageReference Include=`"FFmpeg.AutoGen.Bindings.DynamicallyLoaded`" Version=`"7.1.1`" />"
+Write-Host "Package usage examples:" -ForegroundColor Green
+Write-Host "   FFmpeg.AutoGen.Abstractions"
+Write-Host "   FFmpeg.AutoGen.Bindings.StaticallyLinked"
+Write-Host "   FFmpeg.AutoGen.Bindings.DynamicallyLinked"
+Write-Host "   FFmpeg.AutoGen.Bindings.DynamicallyLoaded"
+Write-Host "   FFmpeg.AutoGen.Bindings.DllImport"
 if (Test-Path $redistProject) {
-    Write-Host "   Redist (optional):   <PackageReference Include=`"FFmpeg.AutoGen.Redist`" Version=`"7.1.1`" />"
+    Write-Host "   FFmpeg.AutoGen.Redist (optional)"
 }

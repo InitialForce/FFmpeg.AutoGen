@@ -21,7 +21,7 @@ if (-not (Test-Path $FFmpegTar)) {
     exit 1
 }
 
-Write-Host "🔄 Extracting FFmpeg tar archive..." -ForegroundColor Blue
+Write-Host "Extracting FFmpeg tar archive..." -ForegroundColor Blue
 
 # Create output directory
 if (Test-Path $OutputPath) {
@@ -30,7 +30,7 @@ if (Test-Path $OutputPath) {
 New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
 
 # Extract tar archive using Windows tar (available in Windows 10+) or 7-Zip
-Write-Host "📦 Extracting $FFmpegTar to $OutputPath"
+Write-Host "Extracting $FFmpegTar to $OutputPath"
 
 try {
     # Try Windows built-in tar first (Windows 10 1803+)
@@ -77,13 +77,28 @@ foreach ($dir in $RequiredDirs) {
     }
 }
 
-Write-Host "✅ FFmpeg extraction completed successfully" -ForegroundColor Green
-Write-Host "📂 Extracted to: $OutputPath"
+Write-Host "FFmpeg extraction completed successfully" -ForegroundColor Green
+Write-Host "Extracted to: $OutputPath"
+
+# Create x64 directory and copy DLLs for generator compatibility
+$binPath = Join-Path $OutputPath "bin"
+$x64Path = Join-Path $binPath "x64"
+if (Test-Path $binPath) {
+    if (-not (Test-Path $x64Path)) {
+        New-Item -ItemType Directory -Path $x64Path -Force | Out-Null
+    }
+    $dllFiles = Get-ChildItem -Path $binPath -Filter "*.dll"
+    if ($dllFiles.Count -gt 0) {
+        $dllFiles | Copy-Item -Destination $x64Path -Force
+        Write-Host "Copied $($dllFiles.Count) DLL files to bin/x64 for generator compatibility"
+    }
+}
 
 # Show contents
 Write-Host ""
-Write-Host "📋 Extracted contents:" -ForegroundColor Blue
+Write-Host "Extracted contents:" -ForegroundColor Blue
 Get-ChildItem -Path $OutputPath -Directory | ForEach-Object {
     $count = (Get-ChildItem -Path $_.FullName -File -Recurse).Count
-    Write-Host "   $($_.Name)/ ($count files)"
+    $dirName = $_.Name
+    Write-Host "   $dirName/ ($count files)"
 }

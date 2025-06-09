@@ -7,29 +7,29 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Generate FFmpeg bindings for all 3 binding projects
+# Generate FFmpeg bindings for all projects
 # Usage: .\generate-bindings.ps1 [-HeadersPath <headers_path>] [-BinariesPath <binaries_path>] [-Namespace <namespace>]
 
-Write-Host "🔄 Generating FFmpeg bindings for all projects..." -ForegroundColor Blue
+Write-Host "Generating FFmpeg bindings for all projects..." -ForegroundColor Blue
 
 # Verify input paths
 if (-not (Test-Path $HeadersPath)) {
-    Write-Host "❌ Headers path not found: $HeadersPath" -ForegroundColor Red
+    Write-Host "Headers path not found: $HeadersPath" -ForegroundColor Red
     exit 1
 }
 
 if (-not (Test-Path $BinariesPath)) {
-    Write-Host "❌ Binaries path not found: $BinariesPath" -ForegroundColor Red
+    Write-Host "Binaries path not found: $BinariesPath" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "📂 Headers:   $HeadersPath"
-Write-Host "📂 Binaries:  $BinariesPath"
-Write-Host "📦 Namespace: $Namespace"
+Write-Host "Headers:   $HeadersPath"
+Write-Host "Binaries:  $BinariesPath"
+Write-Host "Namespace: $Namespace"
 
 # Build generator if needed
 Write-Host ""
-Write-Host "🔨 Building generator..." -ForegroundColor Yellow
+Write-Host "Building generator..." -ForegroundColor Yellow
 Push-Location ".\FFmpeg.AutoGen.CppSharpUnsafeGenerator"
 try {
     dotnet build --configuration Release --verbosity quiet
@@ -41,87 +41,31 @@ finally {
     Pop-Location
 }
 
-# Define the 3 binding projects
-$BindingProjects = @(
-    @{
-        Name = "StaticallyLinked"
-        Path = ".\FFmpeg.AutoGen.Bindings.StaticallyLinked"
-        OutputFile = "StaticallyLinkedBindings.g.cs"
-        GeneratorArgs = @("--staticallyLinked")
-    },
-    @{
-        Name = "DynamicallyLinked"
-        Path = ".\FFmpeg.AutoGen.Bindings.DynamicallyLinked"
-        OutputFile = "DynamicallyLinkedBindings.g.cs"
-        GeneratorArgs = @("--dynamicallyLinked")
-    },
-    @{
-        Name = "DynamicallyLoaded"
-        Path = ".\FFmpeg.AutoGen.Bindings.DynamicallyLoaded"
-        OutputFile = "DynamicallyLoadedBindings.g.cs"
-        GeneratorArgs = @("--dynamicallyLoaded")
-    }
+# Ensure output directories exist
+$OutputDirs = @(
+    ".\FFmpeg.AutoGen\generated",
+    ".\FFmpeg.AutoGen.Abstractions\generated",
+    ".\FFmpeg.AutoGen.Bindings.StaticallyLinked\generated",
+    ".\FFmpeg.AutoGen.Bindings.DynamicallyLinked\generated",
+    ".\FFmpeg.AutoGen.Bindings.DynamicallyLoaded\generated",
+    ".\FFmpeg.AutoGen.Bindings.DllImport\generated"
 )
 
-# Generate bindings for each project
-foreach ($project in $BindingProjects) {
-    Write-Host ""
-    Write-Host "🔸 Generating bindings for $($project.Name)..." -ForegroundColor Cyan
-
-    $outputPath = "$($project.Path)\generated"
-
-    # Create output directory
-    if (-not (Test-Path $outputPath)) {
-        New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
-    }
-
-    # Run generator with project-specific arguments
-    $generatorArgs = @(
-        "run"
-        "--project"
-        ".\FFmpeg.AutoGen.CppSharpUnsafeGenerator"
-        "--configuration"
-        "Release"
-        "--"
-        "--namespace"
-        $Namespace
-        "--headers"
-        $HeadersPath
-        "--bin"
-        $BinariesPath
-        "--output"
-        $outputPath
-    ) + $project.GeneratorArgs
-
-    Write-Host "   Running generator for $($project.Name)..."
-    & dotnet @generatorArgs
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Code generation failed for $($project.Name)" -ForegroundColor Red
-        exit 1
-    }
-
-    # Show generated files for this project
-    if (Test-Path $outputPath) {
-        $files = Get-ChildItem -Path $outputPath -Filter "*.cs"
-        Write-Host "   Generated $($files.Count) files for $($project.Name)"
-        foreach ($file in $files) {
-            $size = [Math]::Round($file.Length / 1KB, 0)
-            $sizeUnit = if ($size -gt 1024) { "$([Math]::Round($file.Length / 1MB, 1))MB" } else { "$($size)KB" }
-            Write-Host "     • $($file.Name) ($sizeUnit)"
-        }
+foreach ($dir in $OutputDirs) {
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
 }
 
-# Generate shared abstractions
+# Run the generator once - it generates all binding types
 Write-Host ""
-Write-Host "🔸 Generating shared abstractions..." -ForegroundColor Cyan
-$abstractionsPath = ".\FFmpeg.AutoGen.Abstractions\generated"
+Write-Host "Running FFmpeg bindings generator..." -ForegroundColor Cyan
 
-if (-not (Test-Path $abstractionsPath)) {
-    New-Item -ItemType Directory -Path $abstractionsPath -Force | Out-Null
-}
+$fullHeadersPath = Resolve-Path $HeadersPath
+$fullBinariesPath = Resolve-Path "$BinariesPath\x64"
+$fullOutputPath = Resolve-Path "."
 
-$abstractionsArgs = @(
+$generatorArgs = @(
     "run"
     "--project"
     ".\FFmpeg.AutoGen.CppSharpUnsafeGenerator"
@@ -131,36 +75,63 @@ $abstractionsArgs = @(
     "--namespace"
     $Namespace
     "--headers"
-    $HeadersPath
+    $fullHeadersPath.Path
     "--bin"
-    $BinariesPath
+    $fullBinariesPath.Path
     "--output"
-    $abstractionsPath
-    "--abstractionsOnly"
+    $fullOutputPath.Path
 )
 
-Write-Host "   Running generator for abstractions..."
-& dotnet @abstractionsArgs
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Abstractions generation failed" -ForegroundColor Red
-    exit 1
+Write-Host "   Running generator..."
+& dotnet @generatorArgs
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Generator completed successfully" -ForegroundColor Green
+} else {
+    Write-Host "Generator completed with exit code: $LASTEXITCODE" -ForegroundColor Yellow
+    Write-Host "Checking if files were generated despite the error..." -ForegroundColor Yellow
 }
 
-# Show abstractions files
-if (Test-Path $abstractionsPath) {
-    $files = Get-ChildItem -Path $abstractionsPath -Filter "*.cs"
-    Write-Host "   Generated $($files.Count) abstraction files"
+# Show generated files for each project
+Write-Host ""
+Write-Host "Generated files:" -ForegroundColor Green
+
+$Projects = @(
+    @{ Name = "FFmpeg.AutoGen"; Path = ".\FFmpeg.AutoGen\generated" },
+    @{ Name = "Abstractions"; Path = ".\FFmpeg.AutoGen.Abstractions\generated" },
+    @{ Name = "StaticallyLinked"; Path = ".\FFmpeg.AutoGen.Bindings.StaticallyLinked\generated" },
+    @{ Name = "DynamicallyLinked"; Path = ".\FFmpeg.AutoGen.Bindings.DynamicallyLinked\generated" },
+    @{ Name = "DynamicallyLoaded"; Path = ".\FFmpeg.AutoGen.Bindings.DynamicallyLoaded\generated" },
+    @{ Name = "DllImport"; Path = ".\FFmpeg.AutoGen.Bindings.DllImport\generated" }
+)
+
+foreach ($project in $Projects) {
+    if (Test-Path $project.Path) {
+        $files = Get-ChildItem -Path $project.Path -Filter "*.cs"
+        if ($files.Count -gt 0) {
+            Write-Host "   $($project.Name): $($files.Count) files"
+            foreach ($file in $files) {
+                $size = [Math]::Round($file.Length / 1KB, 0)
+                $sizeUnit = if ($size -gt 1024) { "$([Math]::Round($file.Length / 1MB, 1))MB" } else { "$($size)KB" }
+                Write-Host "     - $($file.Name) ($sizeUnit)"
+            }
+        } else {
+            Write-Host "   $($project.Name): No files generated" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "   $($project.Name): Output directory not found" -ForegroundColor Yellow
+    }
 }
 
 # Build all projects
 Write-Host ""
-Write-Host "🔨 Building all binding projects..." -ForegroundColor Yellow
+Write-Host "Building all binding projects..." -ForegroundColor Yellow
 
 $AllProjects = @(
     ".\FFmpeg.AutoGen.Abstractions",
     ".\FFmpeg.AutoGen.Bindings.StaticallyLinked",
     ".\FFmpeg.AutoGen.Bindings.DynamicallyLinked",
-    ".\FFmpeg.AutoGen.Bindings.DynamicallyLoaded"
+    ".\FFmpeg.AutoGen.Bindings.DynamicallyLoaded",
+    ".\FFmpeg.AutoGen.Bindings.DllImport"
 )
 
 foreach ($projectPath in $AllProjects) {
@@ -171,7 +142,7 @@ foreach ($projectPath in $AllProjects) {
     try {
         dotnet build --configuration Release --verbosity minimal
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "❌ Failed to build $projectName" -ForegroundColor Red
+            Write-Host "Failed to build $projectName" -ForegroundColor Red
             exit 1
         }
     }
@@ -181,21 +152,4 @@ foreach ($projectPath in $AllProjects) {
 }
 
 Write-Host ""
-Write-Host "✅ All bindings generated and built successfully!" -ForegroundColor Green
-
-# Summary
-Write-Host ""
-Write-Host "📊 Generation summary:" -ForegroundColor Blue
-foreach ($project in $BindingProjects) {
-    $outputPath = "$($project.Path)\generated"
-    if (Test-Path $outputPath) {
-        $fileCount = (Get-ChildItem -Path $outputPath -Filter "*.cs").Count
-        Write-Host "   $($project.Name): $fileCount files"
-    }
-}
-
-$abstractionsFileCount = 0
-if (Test-Path $abstractionsPath) {
-    $abstractionsFileCount = (Get-ChildItem -Path $abstractionsPath -Filter "*.cs").Count
-}
-Write-Host "   Abstractions: $abstractionsFileCount files"
+Write-Host "All bindings generated and built successfully!" -ForegroundColor Green

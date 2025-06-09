@@ -20,16 +20,17 @@ if (-not $FFmpegTar) {
     exit 1
 }
 
-Write-Host "🚀 Starting FFmpeg.AutoGen build pipeline" -ForegroundColor Green
-Write-Host "📦 Input: $FFmpegTar"
-Write-Host "🕒 Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+Write-Host "Starting FFmpeg.AutoGen build pipeline" -ForegroundColor Green
+Write-Host "Input: $FFmpegTar"
+$currentTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+Write-Host "Started: $currentTime"
 
 $StartTime = Get-Date
 
 # Clean build if requested
 if ($Clean) {
     Write-Host ""
-    Write-Host "🧹 Cleaning previous build..." -ForegroundColor Yellow
+    Write-Host "Cleaning previous build..." -ForegroundColor Yellow
     $CleanPaths = @(".\FFmpeg", ".\packages", ".\FFmpeg.AutoGen.Abstractions\generated", ".\FFmpeg.AutoGen.Bindings.StaticallyLinked\generated", ".\FFmpeg.AutoGen.Bindings.DynamicallyLinked\generated", ".\FFmpeg.AutoGen.Bindings.DynamicallyLoaded\generated")
     foreach ($path in $CleanPaths) {
         if (Test-Path $path) {
@@ -41,19 +42,19 @@ if ($Clean) {
 
 # Step 1: Extract FFmpeg
 Write-Host ""
-Write-Host "🔸 Step 1: Extracting FFmpeg archive" -ForegroundColor Cyan
+Write-Host "Step 1: Extracting FFmpeg archive" -ForegroundColor Cyan
 & ".\build\extract-ffmpeg.ps1" -FFmpegTar $FFmpegTar -OutputPath ".\FFmpeg"
 if ($LASTEXITCODE -ne 0) { throw "Extract failed" }
 
 # Step 2: Generate bindings
 Write-Host ""
-Write-Host "🔸 Step 2: Generating C# bindings" -ForegroundColor Cyan
+Write-Host "Step 2: Generating C# bindings" -ForegroundColor Cyan
 & ".\build\generate-bindings.ps1" -HeadersPath ".\FFmpeg\include" -BinariesPath ".\FFmpeg\bin"
 if ($LASTEXITCODE -ne 0) { throw "Generate bindings failed" }
 
 # Step 3: Create packages
 Write-Host ""
-Write-Host "🔸 Step 3: Creating NuGet packages" -ForegroundColor Cyan
+Write-Host "Step 3: Creating NuGet packages" -ForegroundColor Cyan
 & ".\build\create-packages.ps1" -StagingPath ".\FFmpeg"
 if ($LASTEXITCODE -ne 0) { throw "Create packages failed" }
 
@@ -61,12 +62,13 @@ $EndTime = Get-Date
 $Duration = $EndTime - $StartTime
 
 Write-Host ""
-Write-Host "🎉 Build pipeline completed successfully!" -ForegroundColor Green
-Write-Host "⏱️  Total time: $($Duration.ToString('mm\:ss'))"
+Write-Host "Build pipeline completed successfully!" -ForegroundColor Green
+$timeFormatted = $Duration.ToString("mm\:ss")
+Write-Host "Total time: $timeFormatted"
 
 # Show final output
 Write-Host ""
-Write-Host "📊 Build summary:" -ForegroundColor Blue
+Write-Host "Build summary:" -ForegroundColor Blue
 
 # Count generated files across all projects
 $AllGeneratedFiles = @()

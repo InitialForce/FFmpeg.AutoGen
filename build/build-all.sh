@@ -30,7 +30,7 @@ START_TIME=$(date +%s)
 if [ "$CLEAN_BUILD" = true ]; then
     echo ""
     echo "🧹 Cleaning previous build..."
-    CLEAN_PATHS=("./FFmpeg" "./packages" "./FFmpeg.AutoGen.Abstractions/generated" "./FFmpeg.AutoGen.Bindings.StaticallyLinked/generated" "./FFmpeg.AutoGen.Bindings.DynamicallyLinked/generated" "./FFmpeg.AutoGen.Bindings.DynamicallyLoaded/generated")
+    CLEAN_PATHS=("./FFmpeg" "./packages" "./FFmpeg.AutoGen.Abstractions/generated" "./FFmpeg.AutoGen.Bindings.StaticallyLinked/generated" "./FFmpeg.AutoGen.Bindings.DynamicallyLinked/generated" "./FFmpeg.AutoGen.Bindings.DynamicallyLoaded/generated" "./FFmpeg.AutoGen.Bindings.DllImport/generated")
     for path in "${CLEAN_PATHS[@]}"; do
         if [ -d "$path" ]; then
             rm -rf "$path"
