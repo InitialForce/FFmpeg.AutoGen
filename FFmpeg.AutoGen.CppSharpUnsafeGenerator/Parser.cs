@@ -27,7 +27,7 @@ internal sealed class Parser
     {
         var parserOptions = new ParserOptions
         {
-            Verbose = true,
+            Verbose = false,
             ASTContext = new CppSharp.Parser.AST.ASTContext(),
             LanguageVersion = LanguageVersion.C99_GNU
         };
@@ -60,13 +60,17 @@ internal sealed class Parser
                 throw new ArgumentOutOfRangeException();
         }
 
+        // Only show errors and warnings, skip verbose diagnostic messages
         for (uint i = 0; i < result.DiagnosticsCount; ++i)
         {
             var diagnostics = result.GetDiagnostics(i);
 
-            var message =
-                $"{diagnostics.FileName}({diagnostics.LineNumber},{diagnostics.ColumnNumber}): {diagnostics.Level.ToString().ToLower()}: {diagnostics.Message}";
-            Diagnostics.Message(message);
+            if (diagnostics.Level == ParserDiagnosticLevel.Error || diagnostics.Level == ParserDiagnosticLevel.Warning)
+            {
+                var message =
+                    $"{diagnostics.FileName}({diagnostics.LineNumber},{diagnostics.ColumnNumber}): {diagnostics.Level.ToString().ToLower()}: {diagnostics.Message}";
+                Diagnostics.Message(message);
+            }
         }
     }
 }
