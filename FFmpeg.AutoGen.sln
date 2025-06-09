@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31825.309
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FFmpeg.AutoGen", "FFmpeg.AutoGen\FFmpeg.AutoGen.csproj", "{A536B02A-B0B1-4753-8328-17369EF09976}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FFmpeg.AutoGen.Example", "FFmpeg.AutoGen.Example\FFmpeg.AutoGen.Example.csproj", "{5BD870D6-27B4-4208-ACBF-496F2809326A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "0. Solution Items", "0. Solution Items", "{CF48D45D-979F-4574-9E33-A3AC1CB542B5}"
@@ -34,8 +32,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "1. Generation", "1. Generat
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "4. Examples", "4. Examples", "{660FBA30-C9C0-44A6-B4C5-1C5030ED271D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "3. Legacy", "3. Legacy", "{0771FEE5-9700-4F09-99C4-EC36FD5AFEA9}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2. Abstractions", "2. Abstractions", "{1B9CC2D2-096F-4D35-8940-DA6344450430}"
 EndProject
 Global
@@ -44,10 +40,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A536B02A-B0B1-4753-8328-17369EF09976}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A536B02A-B0B1-4753-8328-17369EF09976}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A536B02A-B0B1-4753-8328-17369EF09976}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A536B02A-B0B1-4753-8328-17369EF09976}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5BD870D6-27B4-4208-ACBF-496F2809326A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5BD870D6-27B4-4208-ACBF-496F2809326A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5BD870D6-27B4-4208-ACBF-496F2809326A}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -85,7 +77,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{A536B02A-B0B1-4753-8328-17369EF09976} = {0771FEE5-9700-4F09-99C4-EC36FD5AFEA9}
 		{5BD870D6-27B4-4208-ACBF-496F2809326A} = {660FBA30-C9C0-44A6-B4C5-1C5030ED271D}
 		{2A8E06C6-5A68-4FB4-AE0C-F43B644E3737} = {E9CC1A7F-ADD1-486B-BEB3-B6E388B35731}
 		{4557AF4F-4680-4764-A7A0-F739664B4DA1} = {E9CC1A7F-ADD1-486B-BEB3-B6E388B35731}
