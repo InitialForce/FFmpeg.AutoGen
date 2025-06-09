@@ -71,9 +71,11 @@ internal sealed class FixedArraysGenerator : GeneratorBase<FixedArrayDefinition>
         using (BeginBlock())
             WriteLine($"uint i = 0; foreach(var value in array) {{ _[i++] = value; if (i >= {length}) return; }}");
 
+        WriteLine("#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER");
         WriteLine($"public unsafe Span<{elementType}> GetPinnableReference()");
         using (BeginBlock())
             WriteLine($"fixed ({elementType}* p = &_[0]) return new Span<{elementType}>(p, {length});");
+        WriteLine("#endif");
     }
 
     private void WriteComplexFixedArray(string elementType, int length)
@@ -98,6 +100,7 @@ internal sealed class FixedArraysGenerator : GeneratorBase<FixedArrayDefinition>
         using (BeginBlock())
             WriteLine($"{@fixed} {{ uint i = 0; foreach(var value in array) {{ *(p0 + i++) = value; if (i >= {length}) return; }} }}");
 
+        WriteLine("#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER");
         if (elementType.EndsWith("*"))
         {
             WriteLine($"public unsafe Span<IntPtr> GetPinnableReference()");
@@ -110,5 +113,6 @@ internal sealed class FixedArraysGenerator : GeneratorBase<FixedArrayDefinition>
             using (BeginBlock())
                 WriteLine($"fixed ({elementType}* p = &_0) return new Span<{elementType}>(p, {length});");
         }
+        WriteLine("#endif");
     }
 }

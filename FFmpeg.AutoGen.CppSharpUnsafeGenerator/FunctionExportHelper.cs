@@ -16,10 +16,10 @@ internal static class FunctionExportHelper
         {
             var libraryFullName = Path.GetFileNameWithoutExtension(libraryPath);
             var libraryNameParts = libraryFullName.Split('-');
-            
+
             string libraryName;
             int libraryVersion;
-            
+
             // Handle different DLL naming conventions
             if (libraryNameParts.Length >= 3 && libraryNameParts[1] == "if" && int.TryParse(libraryNameParts[2], out libraryVersion))
             {
