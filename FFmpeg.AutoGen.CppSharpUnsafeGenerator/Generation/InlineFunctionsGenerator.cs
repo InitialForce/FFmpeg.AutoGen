@@ -20,7 +20,8 @@ internal sealed class InlineFunctionsGenerator : GeneratorBase<InlineFunctionDef
         yield return "System";
     }
 
-    protected override IEnumerable<InlineFunctionDefinition> Query(IEnumerable<InlineFunctionDefinition> functions) => base.Query(functions).Select(RewriteFunctionBody);
+    protected override IEnumerable<InlineFunctionDefinition> Query(IEnumerable<InlineFunctionDefinition> functions) => 
+        base.Query(functions).Select(RewriteFunctionBody);
 
     protected override void GenerateDefinition(InlineFunctionDefinition function)
     {

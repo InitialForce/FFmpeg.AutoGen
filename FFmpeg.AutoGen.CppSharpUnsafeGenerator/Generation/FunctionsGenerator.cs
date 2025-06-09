@@ -15,6 +15,7 @@ internal sealed class FunctionsGenerator : GeneratorBase<ExportFunctionDefinitio
     public bool IsStaticallyLinkedGenerationOn { get; set; }
     public bool IsDynamicallyLinkedGenerationOn { get; set; }
     public bool IsDynamicallyLoadedGenerationOn { get; set; }
+    public bool IsDllImportGenerationOn { get; set; }
 
     public static void GenerateFacade(string path, GenerationContext context)
     {
@@ -52,11 +53,18 @@ internal sealed class FunctionsGenerator : GeneratorBase<ExportFunctionDefinitio
         g.Generate();
     }
 
+    public static void GenerateDllImport(string path, GenerationContext context)
+    {
+        using var g = new FunctionsGenerator(path, context);
+        g.IsDllImportGenerationOn = true;
+        g.Generate();
+    }
+
     public override IEnumerable<string> Usings()
     {
         yield return "System";
         yield return "System.Runtime.InteropServices";
-        if (!Context.IsLegacyGenerationOn && (IsStaticallyLinkedGenerationOn || IsDynamicallyLinkedGenerationOn || IsDynamicallyLoadedGenerationOn))
+        if (!Context.IsLegacyGenerationOn && (IsStaticallyLinkedGenerationOn || IsDynamicallyLinkedGenerationOn || IsDynamicallyLoadedGenerationOn || IsDllImportGenerationOn))
             yield return "FFmpeg.AutoGen.Abstractions";
     }
 
@@ -93,6 +101,7 @@ internal sealed class FunctionsGenerator : GeneratorBase<ExportFunctionDefinitio
         if (IsVectorsGenerationOn) GenerateVector(function);
         if (IsStaticallyLinkedGenerationOn) GenerateDllImport(function, "__Internal");
         if (IsDynamicallyLinkedGenerationOn) GenerateDllImport(function, $"{function.LibraryName}-{function.LibraryVersion}");
+        if (IsDllImportGenerationOn) GenerateDllImport(function, GetDllImportLibraryName(function));
     }
 
     public void GenerateFacadeFunction(ExportFunctionDefinition function)
@@ -350,4 +359,14 @@ internal sealed class FunctionsGenerator : GeneratorBase<ExportFunctionDefinitio
     }
 
     private static string GetFunctionDelegateName(ExportFunctionDefinition function) => $"{function.Name}_delegate";
+
+    private static string GetDllImportLibraryName(ExportFunctionDefinition function)
+    {
+        // For DllImport bindings, use the actual DLL filename from the input binaries
+        // This correctly handles different naming conventions like:
+        // - avcodec-if-61.dll -> avcodec-if-61
+        // - libass-9.dll -> libass-9
+        // - libaom.dll -> libaom
+        return function.LibraryFileName;
+    }
 }

@@ -69,7 +69,8 @@ internal class FunctionProcessor
             var exportDefinition = new ExportFunctionDefinition
             {
                 LibraryName = export.LibraryName,
-                LibraryVersion = export.LibraryVersion
+                LibraryVersion = export.LibraryVersion,
+                LibraryFileName = export.LibraryFileName
             };
             PopulateCommon(exportDefinition);
             _context.AddDefinition(exportDefinition);

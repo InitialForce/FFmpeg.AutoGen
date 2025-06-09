@@ -4,4 +4,5 @@ internal record ExportFunctionDefinition : FunctionDefinitionBase
 {
     public string LibraryName { get; init; }
     public int LibraryVersion { get; init; }
+    public string LibraryFileName { get; init; }
 }

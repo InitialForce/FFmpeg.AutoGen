@@ -39,7 +39,13 @@ internal static class FunctionExportHelper
             }
 
             var exports = GetExports(libraryPath);
-            foreach (var export in exports) yield return new FunctionExport { LibraryName = libraryName, LibraryVersion = libraryVersion, Name = export };
+            foreach (var export in exports) yield return new FunctionExport 
+            { 
+                LibraryName = libraryName, 
+                LibraryVersion = libraryVersion, 
+                LibraryFileName = libraryFullName,
+                Name = export 
+            };
         }
     }
 

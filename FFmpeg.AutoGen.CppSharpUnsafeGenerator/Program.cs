@@ -76,6 +76,7 @@ internal class Program
         GenerateStaticallyLinkedBindings(generationContext);
         GenerateDynamicallyLinkedBindings(generationContext);
         GenerateDynamicallyLoadedBindings(generationContext);
+        GenerateDllImportBindings(generationContext);
     }
 
     private static IEnumerable<ASTContext> Parse(string includesDir)
@@ -201,5 +202,16 @@ internal class Program
 
         LibrariesGenerator.Generate("DynamicallyLoadedBindings.libraries.g.cs", context);
         FunctionsGenerator.GenerateDynamicallyLoaded("DynamicallyLoadedBindings.g.cs", context);
+    }
+
+    private static void GenerateDllImportBindings(GenerationContext baseContext)
+    {
+        var context = baseContext with
+        {
+            Namespace = $"{baseContext.Namespace}.Bindings.DllImport", TypeName = "DllImportBindings",
+            OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Bindings.DllImport\generated")
+        };
+
+        FunctionsGenerator.GenerateDllImport("DllImportBindings.g.cs", context);
     }
 }

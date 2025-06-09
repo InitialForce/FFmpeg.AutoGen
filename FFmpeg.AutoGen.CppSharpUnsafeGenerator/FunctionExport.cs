@@ -8,4 +8,5 @@ internal record FunctionExport
     public string Name { get; init; }
     public string LibraryName { get; init; }
     public int LibraryVersion { get; init; }
+    public string LibraryFileName { get; init; }
 }
