@@ -118,16 +118,25 @@ internal sealed class FunctionsGenerator : GeneratorBase<ExportFunctionDefinitio
             .Where(p => p.Type.Name.EndsWith("**") && !p.ByReference && !p.IsConstant)
             .ToList();
 
-
         if (!doublePointerParams.Any())
             return;
 
-        // Generate overloads for each combination of ref parameters
-        foreach (var param in doublePointerParams)
+        // Generate all possible combinations of ref parameters (2^n - 1, excluding the original)
+        var paramCount = doublePointerParams.Count;
+        for (int i = 1; i < (1 << paramCount); i++) // Start from 1 to skip the original combination
         {
+            var refParamsToConvert = new HashSet<FunctionParameter>();
+            for (int j = 0; j < paramCount; j++)
+            {
+                if ((i & (1 << j)) != 0)
+                {
+                    refParamsToConvert.Add(doublePointerParams[j]);
+                }
+            }
+
             var modifiedParameters = function.Parameters.Select(p =>
             {
-                if (p == param)
+                if (refParamsToConvert.Contains(p))
                 {
                     // Convert double pointer to ref single pointer
                     var singlePointerType = p.Type.Name.Substring(0, p.Type.Name.Length - 1); // Remove one *
@@ -153,24 +162,41 @@ internal sealed class FunctionsGenerator : GeneratorBase<ExportFunctionDefinitio
             WriteLine($"public static {function.ReturnType.Name} {function.Name}({refParameters})");
             WriteLine("{");
 
-            // Create the call with proper pointer handling
-            var callParams = string.Join(", ", function.Parameters.Select(p =>
-            {
-                if (p == param)
-                {
-                    return $"&@{p.Name}";
-                }
-                return $"@{p.Name}";
-            }));
+            // Generate fixed statements for all ref parameters
+            var fixedStatements = new List<string>();
+            var ptrNames = new Dictionary<FunctionParameter, string>();
+            int ptrIndex = 1;
 
-            WriteLine($"    fixed ({param.Type.Name.Substring(0, param.Type.Name.Length - 1)}* ptr = &@{param.Name})");
-            WriteLine($"    {{");
+            foreach (var refParam in refParamsToConvert)
+            {
+                var ptrName = refParamsToConvert.Count == 1 ? "ptr" : $"ptr{ptrIndex++}";
+                ptrNames[refParam] = ptrName;
+                fixedStatements.Add($"    fixed ({refParam.Type.Name.Substring(0, refParam.Type.Name.Length - 1)}* {ptrName} = &@{refParam.Name})");
+            }
+
+            // Write nested fixed statements
+            foreach (var fixedStatement in fixedStatements)
+            {
+                WriteLine(fixedStatement);
+                WriteLine("    {");
+            }
+
+            // Generate the call
+            var callParams = string.Join(", ", function.Parameters.Select(p =>
+                refParamsToConvert.Contains(p) ? ptrNames[p] : $"@{p.Name}"));
+
             var returnKeyword = function.ReturnType.Name == "void" ? "" : "return ";
-            WriteLine($"        {returnKeyword}vectors.{function.Name}({string.Join(", ", function.Parameters.Select(p => p == param ? "ptr" : $"@{p.Name}"))});");
-            WriteLine($"    }}");
+            var indent = new string(' ', 4 + (fixedStatements.Count * 4));
+            WriteLine($"{indent}{returnKeyword}vectors.{function.Name}({callParams});");
+
+            // Close all fixed statement blocks
+            for (int k = 0; k < fixedStatements.Count; k++)
+            {
+                WriteLine("    }");
+            }
+
             WriteLine("}");
             WriteLine();
-
         }
     }
 
@@ -184,12 +210,22 @@ internal sealed class FunctionsGenerator : GeneratorBase<ExportFunctionDefinitio
         if (!doublePointerParams.Any())
             return;
 
-        // Generate overloads for each combination of ref parameters
-        foreach (var param in doublePointerParams)
+        // Generate all possible combinations of ref parameters (2^n - 1, excluding the original)
+        var paramCount = doublePointerParams.Count;
+        for (int i = 1; i < (1 << paramCount); i++) // Start from 1 to skip the original combination
         {
+            var refParamsToConvert = new HashSet<FunctionParameter>();
+            for (int j = 0; j < paramCount; j++)
+            {
+                if ((i & (1 << j)) != 0)
+                {
+                    refParamsToConvert.Add(doublePointerParams[j]);
+                }
+            }
+
             var modifiedParameters = function.Parameters.Select(p =>
             {
-                if (p == param)
+                if (refParamsToConvert.Contains(p))
                 {
                     // Convert double pointer to ref single pointer
                     var singlePointerType = p.Type.Name.Substring(0, p.Type.Name.Length - 1); // Remove one *
@@ -215,11 +251,39 @@ internal sealed class FunctionsGenerator : GeneratorBase<ExportFunctionDefinitio
             WriteLine($"public static {function.ReturnType.Name} {function.Name}({refParameters})");
             WriteLine("{");
 
-            WriteLine($"    fixed ({param.Type.Name.Substring(0, param.Type.Name.Length - 1)}* ptr = &@{param.Name})");
-            WriteLine($"    {{");
+            // Generate fixed statements for all ref parameters
+            var fixedStatements = new List<string>();
+            var ptrNames = new Dictionary<FunctionParameter, string>();
+            int ptrIndex = 1;
+
+            foreach (var refParam in refParamsToConvert)
+            {
+                var ptrName = refParamsToConvert.Count == 1 ? "ptr" : $"ptr{ptrIndex++}";
+                ptrNames[refParam] = ptrName;
+                fixedStatements.Add($"    fixed ({refParam.Type.Name.Substring(0, refParam.Type.Name.Length - 1)}* {ptrName} = &@{refParam.Name})");
+            }
+
+            // Write nested fixed statements
+            foreach (var fixedStatement in fixedStatements)
+            {
+                WriteLine(fixedStatement);
+                WriteLine("    {");
+            }
+
+            // Generate the call
+            var callParams = string.Join(", ", function.Parameters.Select(p =>
+                refParamsToConvert.Contains(p) ? ptrNames[p] : $"@{p.Name}"));
+
             var returnKeyword = function.ReturnType.Name == "void" ? "" : "return ";
-            WriteLine($"        {returnKeyword}{function.Name}({string.Join(", ", function.Parameters.Select(p => p == param ? "ptr" : $"@{p.Name}"))});");
-            WriteLine($"    }}");
+            var indent = new string(' ', 4 + (fixedStatements.Count * 4));
+            WriteLine($"{indent}{returnKeyword}{function.Name}({callParams});");
+
+            // Close all fixed statement blocks
+            for (int k = 0; k < fixedStatements.Count; k++)
+            {
+                WriteLine("    }");
+            }
+
             WriteLine("}");
             WriteLine();
         }
