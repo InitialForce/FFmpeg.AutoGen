@@ -16,8 +16,27 @@ internal static class FunctionExportHelper
         {
             var libraryFullName = Path.GetFileNameWithoutExtension(libraryPath);
             var libraryNameParts = libraryFullName.Split('-');
-            var libraryName = libraryNameParts[0];
-            var libraryVersion = int.Parse(libraryNameParts[1]);
+            
+            string libraryName;
+            int libraryVersion;
+            
+            // Handle different DLL naming conventions
+            if (libraryNameParts.Length >= 3 && libraryNameParts[1] == "if" && int.TryParse(libraryNameParts[2], out libraryVersion))
+            {
+                // Format: avcodec-if-61.dll
+                libraryName = libraryNameParts[0];
+            }
+            else if (libraryNameParts.Length >= 2 && int.TryParse(libraryNameParts[1], out libraryVersion))
+            {
+                // Format: libass-9.dll
+                libraryName = libraryNameParts[0];
+            }
+            else
+            {
+                // Format: libaom.dll (no version) - use 0 as default version
+                libraryName = libraryNameParts[0];
+                libraryVersion = 0;
+            }
 
             var exports = GetExports(libraryPath);
             foreach (var export in exports) yield return new FunctionExport { LibraryName = libraryName, LibraryVersion = libraryVersion, Name = export };
