@@ -1,0 +1,14 @@
+prefix=/mingw64
+exec_prefix=${prefix}
+libdir=/mingw64/lib
+includedir=/mingw64/include
+
+Name: libavcodec-if
+Description: FFmpeg codec library
+Version: 61.19.101
+Requires:
+Requires.private: libswresample-if >= 5.3.100, libavutil-if >= 59.39.100
+Conflicts:
+Libs: -L${libdir}  -lavcodec-if
+Libs.private: -lvpx -lm -lvpx -lm -lvpx -lm -lvpx -lm -lwebpmux -liconv -lm -latomic -llzma -ldav1d -laom -ljxl -ljxl_threads -lmp3lame -lm -lopenjp2 -lopus -lspeex -ltheoraenc -ltheoradec -logg -lvorbis -lvorbisenc -lwebp -lmfuuid -lole32 -lstrmiids -lole32 -luser32 -lz -ldl
+Cflags: -I${includedir}

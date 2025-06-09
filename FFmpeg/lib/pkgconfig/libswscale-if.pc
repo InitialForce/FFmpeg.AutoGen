@@ -1,0 +1,14 @@
+prefix=/mingw64
+exec_prefix=${prefix}
+libdir=/mingw64/lib
+includedir=/mingw64/include
+
+Name: libswscale-if
+Description: FFmpeg image rescaling library
+Version: 8.3.100
+Requires:
+Requires.private: libavutil-if >= 59.39.100
+Conflicts:
+Libs: -L${libdir}  -lswscale-if
+Libs.private: -lm -latomic
+Cflags: -I${includedir}
