@@ -72,7 +72,7 @@ public abstract class FunctionResolverBase : IFunctionResolver
                 .ToList()
                 .ForEach(n => GetOrLoadLibrary(n, false));
 
-            var version = DynamicallyLoadedBindings.LibraryVersionMap[libraryName];
+            var version = ffmpeg.LibraryVersionMap[libraryName];
             var nativeLibraryName = GetNativeLibraryName(libraryName, version);
             var libraryPath = Path.Combine(DynamicallyLoadedBindings.LibrariesPath, nativeLibraryName);
             ptr = LoadNativeLibrary(libraryPath);

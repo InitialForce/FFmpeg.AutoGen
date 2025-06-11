@@ -120,7 +120,7 @@ internal static class CInlineFunctionBodyTranslator
         });
 
         // Handle the pattern without explicit type (just variable assignment)
-        // Pattern: "r = {val1, val2};" where r is already declared  
+        // Pattern: "r = {val1, val2};" where r is already declared
         regex = new Regex(@"(\w+)\s*=\s*\{([^}]+)\};?", RegexOptions.Multiline);
         code = regex.Replace(code, match =>
         {
@@ -142,42 +142,42 @@ internal static class CInlineFunctionBodyTranslator
     private static string TranslateCUnionUsage(string code)
     {
         // Replace C union usage with unsafe pointer casting
-        // union av_intfloat32 v; v.f = f; return v.i; 
+        // union av_intfloat32 v; v.f = f; return v.i;
         // becomes: return *(uint*)&f;
-        
+
         // Handle av_intfloat32 (float <-> uint) - allow multiline and various spacing
-        var regex = new Regex(@"union\s+av_intfloat32\s+(\w+);\s*\1\.f\s*=\s*(\w+);\s*return\s+\1\.i;", 
+        var regex = new Regex(@"union\s+av_intfloat32\s+(\w+);\s*\1\.f\s*=\s*(\w+);\s*return\s+\1\.i;",
             RegexOptions.Multiline | RegexOptions.Singleline);
         code = regex.Replace(code, "return *(uint*)&$2;");
 
         // Handle av_intfloat64 (double <-> ulong)
-        regex = new Regex(@"union\s+av_intfloat64\s+(\w+);\s*\1\.f\s*=\s*(\w+);\s*return\s+\1\.i;", 
+        regex = new Regex(@"union\s+av_intfloat64\s+(\w+);\s*\1\.f\s*=\s*(\w+);\s*return\s+\1\.i;",
             RegexOptions.Multiline | RegexOptions.Singleline);
         code = regex.Replace(code, "return *(ulong*)&$2;");
 
         // Handle reverse: union av_intfloat32 v; v.i = i; return v.f;
-        regex = new Regex(@"union\s+av_intfloat32\s+(\w+);\s*\1\.i\s*=\s*(\w+);\s*return\s+\1\.f;", 
+        regex = new Regex(@"union\s+av_intfloat32\s+(\w+);\s*\1\.i\s*=\s*(\w+);\s*return\s+\1\.f;",
             RegexOptions.Multiline | RegexOptions.Singleline);
         code = regex.Replace(code, "return *(float*)&$2;");
 
-        regex = new Regex(@"union\s+av_intfloat64\s+(\w+);\s*\1\.i\s*=\s*(\w+);\s*return\s+\1\.f;", 
+        regex = new Regex(@"union\s+av_intfloat64\s+(\w+);\s*\1\.i\s*=\s*(\w+);\s*return\s+\1\.f;",
             RegexOptions.Multiline | RegexOptions.Singleline);
         code = regex.Replace(code, "return *(double*)&$2;");
 
         // Handle more flexible union patterns with line breaks
-        regex = new Regex(@"union\s+av_intfloat32\s+(\w+);\r?\n\s*\1\.f\s*=\s*(\w+);\r?\n\s*return\s+\1\.i;", 
+        regex = new Regex(@"union\s+av_intfloat32\s+(\w+);\r?\n\s*\1\.f\s*=\s*(\w+);\r?\n\s*return\s+\1\.i;",
             RegexOptions.Multiline);
         code = regex.Replace(code, "return *(uint*)&$2;");
 
-        regex = new Regex(@"union\s+av_intfloat64\s+(\w+);\r?\n\s*\1\.f\s*=\s*(\w+);\r?\n\s*return\s+\1\.i;", 
+        regex = new Regex(@"union\s+av_intfloat64\s+(\w+);\r?\n\s*\1\.f\s*=\s*(\w+);\r?\n\s*return\s+\1\.i;",
             RegexOptions.Multiline);
         code = regex.Replace(code, "return *(ulong*)&$2;");
 
-        regex = new Regex(@"union\s+av_intfloat32\s+(\w+);\r?\n\s*\1\.i\s*=\s*(\w+);\r?\n\s*return\s+\1\.f;", 
+        regex = new Regex(@"union\s+av_intfloat32\s+(\w+);\r?\n\s*\1\.i\s*=\s*(\w+);\r?\n\s*return\s+\1\.f;",
             RegexOptions.Multiline);
         code = regex.Replace(code, "return *(float*)&$2;");
 
-        regex = new Regex(@"union\s+av_intfloat64\s+(\w+);\r?\n\s*\1\.i\s*=\s*(\w+);\r?\n\s*return\s+\1\.f;", 
+        regex = new Regex(@"union\s+av_intfloat64\s+(\w+);\r?\n\s*\1\.i\s*=\s*(\w+);\r?\n\s*return\s+\1\.f;",
             RegexOptions.Multiline);
         code = regex.Replace(code, "return *(double*)&$2;");
 
@@ -202,7 +202,7 @@ internal static class CInlineFunctionBodyTranslator
         // Replace C-style casts with C# casts
         // (type) becomes (type)
         // (const type *const *) becomes (type**)
-        
+
         // Handle complex const pointer patterns: (const uint8_t *const *)
         var regex = new Regex(@"\(const\s+(\w+_t)\s*\*\s*const\s*\*\s*\)", RegexOptions.Multiline);
         code = regex.Replace(code, match =>
@@ -227,9 +227,9 @@ internal static class CInlineFunctionBodyTranslator
 
         // Handle intptr_t casts and pointer conditional expressions
         code = Regex.Replace(code, @"\(void\s*\*\s*\)\s*\(intptr_t\s*\)", "(void*)");
-        
+
         // Handle pattern: (void *)(intptr_t)(p ? p : x) -> (void*)(p != null ? p : x)
-        code = Regex.Replace(code, @"\(void\s*\*\s*\)\s*\(intptr_t\s*\)\s*\(([^?]+)\?\s*([^:]+):\s*([^)]+)\)", 
+        code = Regex.Replace(code, @"\(void\s*\*\s*\)\s*\(intptr_t\s*\)\s*\(([^?]+)\?\s*([^:]+):\s*([^)]+)\)",
             "(void*)($1 != null ? $2 : $3)");
 
         // Handle C unsigned int cast to C# uint
@@ -256,14 +256,11 @@ internal static class CInlineFunctionBodyTranslator
 
     private static string TranslateCBuiltins(string code)
     {
-        // For builtin functions, mark them for manual conversion and comment out the code
+        // For builtin functions, mark them for manual conversion
         var builtinPattern = @"__builtin_\w+";
         if (Regex.IsMatch(code, builtinPattern))
         {
-            // Comment out the original code and add a placeholder
-            var commentedCode = string.Join("\n", code.Split('\n').Select(line => "// " + line));
-            return commentedCode + "\n" + 
-                   "throw new NotImplementedException(\"Function contains __builtin functions that need manual C# implementation\");";
+            return "MANUAL CONVERSION NEEDED";
         }
 
         return code;
@@ -284,7 +281,7 @@ internal static class CInlineFunctionBodyTranslator
         code = Regex.Replace(code, @"\s*}\s*", "\n}");
         code = Regex.Replace(code, @";\s*", ";\n    ");
         code = code.Replace("    \n", "\n");
-        
+
         return code.Trim();
     }
 
@@ -358,12 +355,10 @@ internal static class CInlineFunctionBodyTranslator
             }
         }
 
-        // If there are syntax errors or complex patterns, comment out the code and provide a placeholder
+        // If there are syntax errors or complex patterns, return a marker indicating the function should be skipped
         if (hasErrors)
         {
-            var commentedCode = string.Join("\n", code.Split('\n').Select(line => "// " + line));
-            return commentedCode + "\n" + 
-                   $"throw new NotImplementedException(\"Function has syntax errors or complex patterns: {string.Join(", ", errorMessages)}. Manual conversion required.\");";
+            return "MANUAL CONVERSION NEEDED";
         }
 
         return code;

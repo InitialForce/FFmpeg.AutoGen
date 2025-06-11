@@ -6,9 +6,9 @@ includedir=/mingw64/include
 Name: libavformat-if
 Description: FFmpeg container format library
 Version: 61.7.100
-Requires:
+Requires: 
 Requires.private: libavcodec-if >= 61.19.101, libswresample-if >= 5.3.100, libavutil-if >= 59.39.100
 Conflicts:
-Libs: -L${libdir}  -lavformat-if
+Libs: -L${libdir}  -lavformat-if 
 Libs.private: -lm -latomic -lxml2 -lbz2 -lmodplug -lz -lgnutls -lrtmp -lz -lgmp -lgnutls -lhogweed -lnettle -lsrt -lws2_32
 Cflags: -I${includedir}

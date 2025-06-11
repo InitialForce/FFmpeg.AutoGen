@@ -36,14 +36,14 @@ internal class Program
             TypeAliases = { { "int64_t", typeof(long) } },
             WellKnownMacros =
             {
-                { "FFERRTAG", typeof(int) }, 
+                { "FFERRTAG", typeof(int) },
                 { "MKTAG", typeof(int) },
                 { "UINT64_C", typeof(ulong) },
                 { "AV_VERSION_INT", typeof(int) },
                 { "AV_VERSION", typeof(string) },
-                { "_DHUGE_EXP", typeof(int) }, 
-                { "_DMAX", typeof(long) }, 
-                { "_FMAX", typeof(long) }, 
+                { "_DHUGE_EXP", typeof(int) },
+                { "_DMAX", typeof(long) },
+                { "_FMAX", typeof(long) },
                 { "_LMAX", typeof(long) }
             },
             FunctionExportMap = functionExports
@@ -164,7 +164,7 @@ internal class Program
         var abstractionsFiles = new[]
         {
             "ConstCharPtrMarshaler.cs",
-            "FFmpeg.cs", 
+            "FFmpeg.cs",
             "IFixedArray.cs",
             "UTF8Marshaler.cs"
         };
@@ -173,7 +173,7 @@ internal class Program
         {
             var sourcePath = Path.Combine(abstractionsDir, fileName);
             var targetPath = Path.Combine(targetDirectory, fileName);
-            
+
             if (File.Exists(sourcePath))
             {
                 var content = File.ReadAllText(sourcePath);
@@ -192,20 +192,20 @@ internal class Program
             OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Bindings.StaticallyLinked\generated"),
             ExistingInlineFunctionMap = new Dictionary<string, InlineFunctionDefinition>() // Use empty map for binding projects
         };
-        
+
         // Copy abstractions files to make project self-contained
         CopyAbstractionsFiles(context.OutputDir, context.Namespace);
-        
+
         // Generate all common types
         MacrosGenerator.Generate($"{context.TypeName}.macros.g.cs", context);
         EnumsGenerator.Generate("Enums.g.cs", context);
         DelegatesGenerator.Generate("Delegates.g.cs", context);
         FixedArraysGenerator.Generate("Arrays.g.cs", context);
         StructuresGenerator.Generate("Structs.g.cs", context);
-        
+
         // Generate inline functions
         InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
-        
+
         // Generate functions
         FunctionsGenerator.GenerateStaticallyLinked("ffmpeg.g.cs", context);
     }
@@ -228,10 +228,10 @@ internal class Program
         DelegatesGenerator.Generate("Delegates.g.cs", context);
         FixedArraysGenerator.Generate("Arrays.g.cs", context);
         StructuresGenerator.Generate("Structs.g.cs", context);
-        
+
         // Generate inline functions
         InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
-        
+
         // Generate functions
         FunctionsGenerator.GenerateDynamicallyLinked("ffmpeg.g.cs", context);
     }
@@ -254,10 +254,10 @@ internal class Program
         DelegatesGenerator.Generate("Delegates.g.cs", context);
         FixedArraysGenerator.Generate("Arrays.g.cs", context);
         StructuresGenerator.Generate("Structs.g.cs", context);
-        
+
         // Generate inline functions
         InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
-        
+
         // Generate library info and functions
         LibrariesGenerator.Generate("ffmpeg.libraries.g.cs", context);
         FunctionsGenerator.GenerateDynamicallyLoaded("ffmpeg.g.cs", context);
@@ -281,10 +281,10 @@ internal class Program
         DelegatesGenerator.Generate("Delegates.g.cs", context);
         FixedArraysGenerator.Generate("Arrays.g.cs", context);
         StructuresGenerator.Generate("Structs.g.cs", context);
-        
+
         // Generate inline functions
         InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
-        
+
         // Generate functions
         FunctionsGenerator.GenerateDllImport("ffmpeg.g.cs", context);
     }

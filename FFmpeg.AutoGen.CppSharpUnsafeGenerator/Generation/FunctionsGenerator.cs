@@ -335,9 +335,9 @@ internal sealed class FunctionsGenerator : GeneratorBase<ExportFunctionDefinitio
     {
         // Generate the delegate type
         GenerateDelegateType(function);
-        
+
         var functionDelegateName = GetFunctionDelegateName(function);
-        
+
         // Generate the delegate field for caching
         WriteLine($"private static {functionDelegateName}? _{function.Name}_cache;");
         WriteLine();
@@ -350,7 +350,7 @@ internal sealed class FunctionsGenerator : GeneratorBase<ExportFunctionDefinitio
         function.Parameters.ToList().ForEach(p => this.WriteParam(p, p.Name));
         this.WriteReturnComment(function);
         this.WriteObsoletion(function);
-        
+
         WriteLine($"public static {function.ReturnType.Name} {function.Name}({parameters})");
         using (BeginBlock())
         {

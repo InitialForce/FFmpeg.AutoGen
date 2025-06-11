@@ -19,11 +19,13 @@
   <!-- Include all FFmpeg binaries in the package -->
   <ItemGroup>
     <Content Include="../FFmpeg/bin/*.dll" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../FFmpeg/bin/*.exe" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Copy binaries to output directory when building projects that reference this -->
   <ItemGroup>
     <None Include="../FFmpeg/bin/*.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../FFmpeg/bin/*.exe" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -6,9 +6,9 @@ includedir=/mingw64/include
 Name: libswresample-if
 Description: FFmpeg audio resampling library
 Version: 5.3.100
-Requires:
+Requires: 
 Requires.private: libavutil-if >= 59.39.100
 Conflicts:
-Libs: -L${libdir}  -lswresample-if
+Libs: -L${libdir}  -lswresample-if 
 Libs.private: -lm -lsoxr -latomic
 Cflags: -I${includedir}

@@ -21,7 +21,7 @@ internal sealed class InlineFunctionsGenerator : GeneratorBase<InlineFunctionDef
     }
 
     protected override IEnumerable<InlineFunctionDefinition> Query(IEnumerable<InlineFunctionDefinition> functions) =>
-        base.Query(functions).Select(RewriteFunctionBody);
+        base.Query(functions).Select(RewriteFunctionBody).Where(f => f != null);
 
     protected override void GenerateDefinition(InlineFunctionDefinition function)
     {
@@ -41,7 +41,7 @@ internal sealed class InlineFunctionsGenerator : GeneratorBase<InlineFunctionDef
         WriteLine();
     }
 
-    private InlineFunctionDefinition RewriteFunctionBody(InlineFunctionDefinition function)
+    private InlineFunctionDefinition? RewriteFunctionBody(InlineFunctionDefinition function)
     {
         // If we have an existing function with the same hash, use its manually crafted body
         if (Context.ExistingInlineFunctionMap.TryGetValue(function.Name, out var existing) &&
@@ -53,17 +53,13 @@ internal sealed class InlineFunctionsGenerator : GeneratorBase<InlineFunctionDef
         // Attempt to translate the C body to C#
         var translatedBody = CInlineFunctionBodyTranslator.TranslateToCs(function.Body);
 
-        // If translation failed or produced invalid code, generate a commented-out function
+        // If translation failed or produced invalid code, skip this function entirely
         if (string.IsNullOrWhiteSpace(translatedBody) ||
             translatedBody.Contains("MANUAL CONVERSION NEEDED") ||
             translatedBody.Contains("NotImplementedException"))
         {
-            // Generate a commented-out function with the original C code for reference
-            var lines = function.Body.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-            var commentedBody = "{\n    // TODO: Convert this C code to C#:\n" +
-                               string.Join("\n", lines.Select(line => "    // " + line.Trim())) +
-                               "\n    throw new NotImplementedException(\"Inline function not yet converted to C#\");\n}";
-            return function with { Body = commentedBody };
+            // Return null to indicate this function should be skipped
+            return null;
         }
 
         return function with { Body = "{\n    " + translatedBody + "\n}" };

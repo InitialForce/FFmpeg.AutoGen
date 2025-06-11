@@ -6,9 +6,9 @@ includedir=/mingw64/include
 Name: libswscale-if
 Description: FFmpeg image rescaling library
 Version: 8.3.100
-Requires:
+Requires: 
 Requires.private: libavutil-if >= 59.39.100
 Conflicts:
-Libs: -L${libdir}  -lswscale-if
+Libs: -L${libdir}  -lswscale-if 
 Libs.private: -lm -latomic
 Cflags: -I${includedir}
