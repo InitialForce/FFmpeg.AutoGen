@@ -27,8 +27,5 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
   </ItemGroup>
   
-  <ItemGroup>
-    <ProjectReference Include="..\FFmpeg.AutoGen.Abstractions\FFmpeg.AutoGen.Abstractions.csproj" />
-  </ItemGroup>
 
 </Project>
