@@ -1,4 +1,5 @@
-﻿using FFmpeg.AutoGen.CppSharpUnsafeGenerator.Definitions;
+﻿using System.Collections.Generic;
+using FFmpeg.AutoGen.CppSharpUnsafeGenerator.Definitions;
 
 namespace FFmpeg.AutoGen.CppSharpUnsafeGenerator.Generation;
 
@@ -10,6 +11,11 @@ internal sealed class MacrosGenerator : GeneratorBase<MacroDefinition>
     {
         using var g = new MacrosGenerator(path, context);
         g.Generate();
+    }
+
+    public override IEnumerable<string> Usings()
+    {
+        return new string[0];
     }
 
     protected override void GenerateDefinition(MacroDefinition @enum)

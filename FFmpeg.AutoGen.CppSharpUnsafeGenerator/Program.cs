@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CppSharp.AST;
+using FFmpeg.AutoGen.CppSharpUnsafeGenerator.Definitions;
 using FFmpeg.AutoGen.CppSharpUnsafeGenerator.Generation;
 using FFmpeg.AutoGen.CppSharpUnsafeGenerator.Processing;
 
@@ -109,9 +110,6 @@ internal class Program
         // libswresample
         yield return p.Parse("libswresample/swresample.h");
 
-        // libpostproc
-        yield return p.Parse("libpostproc/postprocess.h");
-
         // libswscale
         yield return p.Parse("libswscale/swscale.h");
 
@@ -148,70 +146,146 @@ internal class Program
         FixedArraysGenerator.Generate("Arrays.g.cs", context);
         StructuresGenerator.Generate("Structs.g.cs", context);
         FunctionsGenerator.GenerateFacade($"{context.TypeName}.functions.facade.g.cs", context);
-        InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
+        // InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
         FunctionsGenerator.GenerateVectors("vectors.g.cs", context with { TypeName = "vectors" });
         FunctionsGenerator.GenerateDynamicallyLoaded("DynamicallyLoadedBindings.g.cs", context with { TypeName = "DynamicallyLoadedBindings" });
     }
 
     private static void GenerateAbstractions(GenerationContext baseContext)
     {
-        var context = baseContext with
+        // Abstractions project now only contains hand-written utility code
+        // All generated types are included in each binding project to avoid conflicts
+        // No generated files needed here
+    }
+
+    private static void CopyAbstractionsFiles(string targetDirectory, string targetNamespace)
+    {
+        var abstractionsDir = Path.Combine(Directory.GetCurrentDirectory(), "FFmpeg.AutoGen.Abstractions");
+        var abstractionsFiles = new[]
         {
-            Namespace = $"{baseContext.Namespace}.Abstractions",
-            OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Abstractions\generated")
+            "ConstCharPtrMarshaler.cs",
+            "FFmpeg.cs", 
+            "IFixedArray.cs",
+            "UTF8Marshaler.cs"
         };
 
-        MacrosGenerator.Generate($"{context.TypeName}.macros.g.cs", context);
-        EnumsGenerator.Generate("Enums.g.cs", context);
-        DelegatesGenerator.Generate("Delegates.g.cs", context);
-        FixedArraysGenerator.Generate("Arrays.g.cs", context);
-        StructuresGenerator.Generate("Structs.g.cs", context);
-        FunctionsGenerator.GenerateFacade($"{context.TypeName}.functions.facade.g.cs", context);
-        FunctionsGenerator.GenerateVectors("vectors.g.cs", context with { TypeName = "vectors" });
-        InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
+        foreach (var fileName in abstractionsFiles)
+        {
+            var sourcePath = Path.Combine(abstractionsDir, fileName);
+            var targetPath = Path.Combine(targetDirectory, fileName);
+            
+            if (File.Exists(sourcePath))
+            {
+                var content = File.ReadAllText(sourcePath);
+                // Update namespace to match binding project
+                content = content.Replace("namespace FFmpeg.AutoGen.Abstractions;", $"namespace {targetNamespace};");
+                File.WriteAllText(targetPath, content);
+            }
+        }
     }
 
     private static void GenerateStaticallyLinkedBindings(GenerationContext baseContext)
     {
         var context = baseContext with
         {
-            Namespace = $"{baseContext.Namespace}.Bindings.StaticallyLinked", TypeName = "StaticallyLinkedBindings",
-            OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Bindings.StaticallyLinked\generated")
+            Namespace = $"{baseContext.Namespace}.Bindings.StaticallyLinked", TypeName = "ffmpeg",
+            OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Bindings.StaticallyLinked\generated"),
+            ExistingInlineFunctionMap = new Dictionary<string, InlineFunctionDefinition>() // Use empty map for binding projects
         };
-        FunctionsGenerator.GenerateStaticallyLinked("StaticallyLinkedBindings.g.cs", context);
+        
+        // Copy abstractions files to make project self-contained
+        CopyAbstractionsFiles(context.OutputDir, context.Namespace);
+        
+        // Generate all common types
+        MacrosGenerator.Generate($"{context.TypeName}.macros.g.cs", context);
+        EnumsGenerator.Generate("Enums.g.cs", context);
+        DelegatesGenerator.Generate("Delegates.g.cs", context);
+        FixedArraysGenerator.Generate("Arrays.g.cs", context);
+        StructuresGenerator.Generate("Structs.g.cs", context);
+        
+        // Generate inline functions
+        InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
+        
+        // Generate functions
+        FunctionsGenerator.GenerateStaticallyLinked("ffmpeg.g.cs", context);
     }
 
     private static void GenerateDynamicallyLinkedBindings(GenerationContext baseContext)
     {
         var context = baseContext with
         {
-            Namespace = $"{baseContext.Namespace}.Bindings.DynamicallyLinked", TypeName = "DynamicallyLinkedBindings",
-            OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Bindings.DynamicallyLinked\generated")
+            Namespace = $"{baseContext.Namespace}.Bindings.DynamicallyLinked", TypeName = "ffmpeg",
+            OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Bindings.DynamicallyLinked\generated"),
+            ExistingInlineFunctionMap = new Dictionary<string, InlineFunctionDefinition>() // Use empty map for binding projects
         };
 
-        FunctionsGenerator.GenerateDynamicallyLinked("DynamicallyLinkedBindings.g.cs", context);
+        // Copy abstractions files to make project self-contained
+        CopyAbstractionsFiles(context.OutputDir, context.Namespace);
+
+        // Generate all common types
+        MacrosGenerator.Generate($"{context.TypeName}.macros.g.cs", context);
+        EnumsGenerator.Generate("Enums.g.cs", context);
+        DelegatesGenerator.Generate("Delegates.g.cs", context);
+        FixedArraysGenerator.Generate("Arrays.g.cs", context);
+        StructuresGenerator.Generate("Structs.g.cs", context);
+        
+        // Generate inline functions
+        InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
+        
+        // Generate functions
+        FunctionsGenerator.GenerateDynamicallyLinked("ffmpeg.g.cs", context);
     }
 
     private static void GenerateDynamicallyLoadedBindings(GenerationContext baseContext)
     {
         var context = baseContext with
         {
-            Namespace = $"{baseContext.Namespace}.Bindings.DynamicallyLoaded", TypeName = "DynamicallyLoadedBindings",
-            OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Bindings.DynamicallyLoaded\generated")
+            Namespace = $"{baseContext.Namespace}.Bindings.DynamicallyLoaded", TypeName = "ffmpeg",
+            OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Bindings.DynamicallyLoaded\generated"),
+            ExistingInlineFunctionMap = new Dictionary<string, InlineFunctionDefinition>() // Use empty map for binding projects
         };
 
-        LibrariesGenerator.Generate("DynamicallyLoadedBindings.libraries.g.cs", context);
-        FunctionsGenerator.GenerateDynamicallyLoaded("DynamicallyLoadedBindings.g.cs", context);
+        // Copy abstractions files to make project self-contained
+        CopyAbstractionsFiles(context.OutputDir, context.Namespace);
+
+        // Generate all common types
+        MacrosGenerator.Generate($"{context.TypeName}.macros.g.cs", context);
+        EnumsGenerator.Generate("Enums.g.cs", context);
+        DelegatesGenerator.Generate("Delegates.g.cs", context);
+        FixedArraysGenerator.Generate("Arrays.g.cs", context);
+        StructuresGenerator.Generate("Structs.g.cs", context);
+        
+        // Generate inline functions
+        InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
+        
+        // Generate library info and functions
+        LibrariesGenerator.Generate("ffmpeg.libraries.g.cs", context);
+        FunctionsGenerator.GenerateDynamicallyLoaded("ffmpeg.g.cs", context);
     }
 
     private static void GenerateDllImportBindings(GenerationContext baseContext)
     {
         var context = baseContext with
         {
-            Namespace = $"{baseContext.Namespace}.Bindings.DllImport", TypeName = "DllImportBindings",
-            OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Bindings.DllImport\generated")
+            Namespace = $"{baseContext.Namespace}.Bindings.DllImport", TypeName = "ffmpeg",
+            OutputDir = Path.Combine(baseContext.SolutionDir, @"FFmpeg.AutoGen.Bindings.DllImport\generated"),
+            ExistingInlineFunctionMap = new Dictionary<string, InlineFunctionDefinition>() // Use empty map for binding projects
         };
 
-        FunctionsGenerator.GenerateDllImport("DllImportBindings.g.cs", context);
+        // Copy abstractions files to make project self-contained
+        CopyAbstractionsFiles(context.OutputDir, context.Namespace);
+
+        // Generate all common types
+        MacrosGenerator.Generate($"{context.TypeName}.macros.g.cs", context);
+        EnumsGenerator.Generate("Enums.g.cs", context);
+        DelegatesGenerator.Generate("Delegates.g.cs", context);
+        FixedArraysGenerator.Generate("Arrays.g.cs", context);
+        StructuresGenerator.Generate("Structs.g.cs", context);
+        
+        // Generate inline functions
+        InlineFunctionsGenerator.Generate($"{context.TypeName}.functions.inline.g.cs", context);
+        
+        // Generate functions
+        FunctionsGenerator.GenerateDllImport("ffmpeg.g.cs", context);
     }
 }
