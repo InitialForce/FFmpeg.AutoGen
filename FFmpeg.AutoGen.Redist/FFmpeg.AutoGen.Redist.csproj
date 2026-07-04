@@ -4,6 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <PackageId>FFmpeg.AutoGen.Redist</PackageId>
+    <Version>7.1.2</Version>
     <Description>FFmpeg native binaries redistribution package</Description>
     <Copyright>Copyright © FFmpeg.AutoGen Contributors</Copyright>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
@@ -16,16 +17,19 @@
     <None Include="README.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
-  <!-- Include all FFmpeg binaries in the package -->
+  <!-- Ship the shared-linked FFmpeg DLLs. SDL2/openal are excluded: their only
+       consumer was ffplay.exe, which we no longer ship. -->
   <ItemGroup>
-    <Content Include="../FFmpeg/bin/*.dll" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../FFmpeg/bin/*.exe" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../FFmpeg/bin/*.dll" Exclude="../FFmpeg/bin/SDL2.dll;../FFmpeg/bin/libopenal-1.dll" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../FFmpeg/bin/ffmpeg.exe" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../FFmpeg/bin/ffprobe.exe" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Copy binaries to output directory when building projects that reference this -->
   <ItemGroup>
-    <None Include="../FFmpeg/bin/*.dll" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="../FFmpeg/bin/*.exe" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../FFmpeg/bin/*.dll" Exclude="../FFmpeg/bin/SDL2.dll;../FFmpeg/bin/libopenal-1.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../FFmpeg/bin/ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../FFmpeg/bin/ffprobe.exe" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
