@@ -1,38 +1,96 @@
-name: main
+name: pack-and-verify
+
 on:
   push:
     branches: [master]
   pull_request:
     branches: [master]
+  workflow_dispatch: {}
+  schedule:
+    # Keepalive: GitHub auto-disables *scheduled* workflows on a repo that has
+    # seen no push activity for 60 days (same trap as the MINGW-packages
+    # canary, br-ffmpeg-pipeline-61d.5). This monthly cron is a pragmatic
+    # placeholder, not a full fix, and it has a bootstrap hole: once a repo
+    # has actually gone 60 days with zero pushes, GitHub disables the
+    # schedule trigger itself -- a workflow that only ever fires from its own
+    # schedule can't run to re-enable that schedule, because it never fires
+    # again once disabled. The epic-preferred fix is an external kick (a
+    # cross-repo dispatcher that calls the Actions API / `gh workflow run`
+    # against this repo on its own independent schedule), tracked at the
+    # br-ffmpeg-pipeline-61d epic level, not yet a numbered bead for this
+    # repo. Until that exists, this cron keeps CI green for as long as *any*
+    # push (even unrelated) lands within a 60-day window, and `workflow_dispatch`
+    # above is the manual escape hatch if the schedule ever does lapse.
+    - cron: '17 6 1 * *'
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+  pack-and-verify:
+    runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
-      - name: Install FFmpeg - linux
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get install ffmpeg -y
-      - name: Build
-        run: |
-          dotnet build -c Release
-      - name: Test
-        run: |
-          dotnet test -c Release
-      - uses: actions/upload-artifact@v4
-        if: matrix.os == 'windows-latest'
+          dotnet-version: '9.0.x'
+
+      - uses: actions/setup-python@v5
         with:
-          path: FFmpeg.AutoGen/bin/Release/*.nupkg
-          if-no-files-found: error
-      - name: Codegen Build & Test
-        if: matrix.os == 'windows-latest'
+          python-version: '3.x'
+
+      - name: Redist verify script self-test
+        run: python scripts/test_verify_redist.py
+
+      # Only the projects this workflow actually packs/tests are built here,
+      # not the whole solution. FFmpeg.AutoGen.Example does not compile on
+      # master today (it still `using`s FFmpeg.AutoGen.Abstractions, removed
+      # from the binding projects by 0e9b0b7 "Make bindings projects
+      # self-contained, no dep on abstractions"; verified failing identically
+      # on a clean checkout with no workflow changes). That's a pre-existing
+      # product bug unrelated to CI plumbing -- tracked separately, not fixed
+      # as a side effect of this bead. FFmpeg.AutoGen.CppSharpUnsafeGenerator
+      # is skipped because nothing here runs codegen (see below).
+      - name: Build Redist
+        run: dotnet build FFmpeg.AutoGen.Redist -c Release
+
+      - name: Build Bindings.DllImport
+        run: dotnet build FFmpeg.AutoGen.Bindings.DllImport -c Release
+
+      - name: Build ClangMacroParser.Test
+        run: dotnet build FFmpeg.AutoGen.ClangMacroParser.Test -c Release
+
+      # Upstream's codegen step (`dotnet run -p FFmpeg.AutoGen.CppSharpUnsafeGenerator`
+      # then `dotnet build FFmpeg.AutoGen`) targets a project that no longer exists:
+      # PR #1 split the single FFmpeg.AutoGen project into the per-binding
+      # FFmpeg.AutoGen.Bindings.* projects, each with its own generated/ folder.
+      # FFmpeg.AutoGen/generated is a stale leftover from before that split and
+      # is not referenced by any current project. Regenerating bindings and
+      # diffing them against committed output is real, separate work tracked as
+      # br-ffmpeg-pipeline-61d.10 (bindings drift gate) -- dropped here rather
+      # than left silently broken.
+
+      - name: Test
+        run: dotnet test FFmpeg.AutoGen.ClangMacroParser.Test -c Release --no-build
+
+      - name: Pack Redist
+        run: dotnet pack FFmpeg.AutoGen.Redist -c Release --no-build -o artifacts/nupkgs
+
+      - name: Pack Bindings.DllImport
+        run: dotnet pack FFmpeg.AutoGen.Bindings.DllImport -c Release --no-build -o artifacts/nupkgs
+
+      - name: Read expected Redist version
+        id: redist-version
         run: |
-          dotnet run -c Release -p FFmpeg.AutoGen.CppSharpUnsafeGenerator -- --input FFmpeg --namespace FFmpeg.AutoGen
-          dotnet build FFmpeg.AutoGen
+          $xml = [xml](Get-Content FFmpeg.AutoGen.Redist/FFmpeg.AutoGen.Redist.csproj)
+          $version = ($xml.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1).Version
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Verify packed Redist nupkg
+        run: |
+          $nupkg = Get-ChildItem artifacts/nupkgs/FFmpeg.AutoGen.Redist.*.nupkg | Select-Object -First 1
+          python scripts/verify_redist.py $nupkg.FullName --expected-version "${{ steps.redist-version.outputs.version }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nupkgs
+          path: artifacts/nupkgs/*.nupkg
+          if-no-files-found: error
