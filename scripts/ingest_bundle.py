@@ -238,6 +238,17 @@ def stage_ffmpeg_tree(payload_dir: Path, staging_root: Path) -> tuple[Path, set[
         if src.is_dir():
             shutil.copytree(src, dst)
 
+    # Every file already committed under FFmpeg/ is mode 100755 (confirmed via
+    # `git ls-tree`), regardless of file type -- bin/*.dll, include/*.h,
+    # lib/*.a alike. The upstream bundle's own permission bits don't follow
+    # that convention (headers/libs extract as 644), so copying them as-is
+    # would churn every ingested file's mode with no content change on every
+    # ingest. Force the established convention here so git status/diff only
+    # ever shows real content deltas.
+    for path in staged_ffmpeg.rglob("*"):
+        if path.is_file():
+            path.chmod(0o755)
+
     return staged_ffmpeg, dropped_found
 
 
