@@ -128,7 +128,12 @@ def build_minimal_pe(imported_dlls: list[str], extra_padding: int = 0) -> bytes:
     return bytes(header_blob) + section_payload + b"\x00" * extra_padding
 
 
-GOOD_FFMPEG_IMPORTS = ["avcodec-if-61.dll", "avutil-if-59.dll", "KERNEL32.dll"]
+GOOD_FFMPEG_IMPORTS = [
+    "avcodec-if-61.dll",
+    "avutil-if-59.dll",
+    "avdevice-if-61.dll",
+    "KERNEL32.dll",
+]
 
 BASELINE_FILES = {
     "ffmpeg.exe": build_minimal_pe(GOOD_FFMPEG_IMPORTS),
@@ -222,11 +227,20 @@ class VerifyRedistTests(unittest.TestCase):
 
     # --- gate 2: forbidden files ---
 
-    def test_forbidden_gate_fails_on_reintroduced_sdl2(self):
+    def test_forbidden_gate_fails_on_ffplay(self):
         doctored = dict(BASELINE_FILES)
-        doctored["SDL2.dll"] = b"\x00" * 10
+        doctored["ffplay.exe"] = b"\x00" * 10
         results = self._run(doctored, manifest_names=doctored.keys())
         self._assert_only_failed(results, "forbidden-files")
+
+    def test_forbidden_gate_allows_sdl2_and_openal(self):
+        # avdevice-if-61.dll links SDL2.dll + libopenal-1.dll, and avdevice is a
+        # static import of the exes, so both DLLs are required payload now.
+        allowed = dict(BASELINE_FILES)
+        allowed["SDL2.dll"] = b"\x00" * 10
+        allowed["libopenal-1.dll"] = b"\x00" * 10
+        results = self._run(allowed, manifest_names=allowed.keys())
+        self.assertTrue(results["forbidden-files"].passed)
 
     def test_forbidden_gate_fails_on_pdb(self):
         doctored = dict(BASELINE_FILES)
@@ -333,7 +347,7 @@ class VerifyRedistTests(unittest.TestCase):
 
     def test_main_exit_code_nonzero_on_doctored_package(self):
         doctored = dict(BASELINE_FILES)
-        doctored["SDL2.dll"] = b"\x00" * 10
+        doctored["ffplay.exe"] = b"\x00" * 10
         nupkg = build_nupkg(self.tmp_path / "cli-bad.nupkg", doctored)
         manifest = self._manifest(doctored.keys())
         with mock.patch.object(vr, "DEFAULT_MANIFEST_PATH", manifest):

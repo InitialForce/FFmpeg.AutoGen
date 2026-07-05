@@ -8,11 +8,14 @@ SDL2-linked 7.1.1 package silently poisoning NuGet caches):
   1. manifest    - exact file-set compare of runtimes/win-x64/native/ against
                     scripts/redist-manifest.txt (catches unexpected extra files,
                     not just missing required ones).
-  2. forbidden    - ffplay.exe, SDL2.dll, libopenal-1.dll, *.pdb must not be present.
+  2. forbidden    - ffplay.exe and *.pdb must not be present. (SDL2.dll and
+                    libopenal-1.dll are required payload: avdevice-if-61.dll links
+                    against them and is a static import of ffmpeg.exe/ffprobe.exe.)
   3. sizes        - nupkg < 100MB; ffmpeg.exe / ffprobe.exe < 5MB each;
                     avcodec-if-*.dll < 1.5x its known baseline size.
-  4. pe-imports   - ffmpeg.exe / ffprobe.exe must import avcodec-if-61.dll and
-                    avutil-if-59.dll, and must not import SDL2.dll.
+  4. pe-imports   - ffmpeg.exe / ffprobe.exe must import avcodec-if-61.dll,
+                    avutil-if-59.dll and avdevice-if-61.dll, and must not import
+                    SDL2.dll directly (SDL2 is pulled in transitively via avdevice).
   5. gpl-scan     - no binary may contain evidence of a linked x264/x265 GPL
                     encoder (project banner strings, or an embedded
                     --enable-gpl / --enable-libx264 / --enable-libx265
@@ -43,9 +46,14 @@ DEFAULT_MANIFEST_PATH = SCRIPT_DIR / "redist-manifest.txt"
 
 NATIVE_PREFIX = "runtimes/win-x64/native/"
 
-FORBIDDEN_EXACT_NAMES = {"ffplay.exe", "SDL2.dll", "libopenal-1.dll"}
+# SDL2.dll and libopenal-1.dll are legitimate payload: avdevice-if-61.dll links
+# against both, and avdevice is a static import of ffmpeg.exe/ffprobe.exe. Only
+# ffplay.exe (unused, its own separate consumer) and debug symbols stay banned.
+FORBIDDEN_EXACT_NAMES = {"ffplay.exe"}
 
-REQUIRED_PE_IMPORTS = {"avcodec-if-61.dll", "avutil-if-59.dll"}
+# ffmpeg.exe/ffprobe.exe import avdevice-if-61.dll directly; avdevice in turn pulls
+# in SDL2.dll + libopenal-1.dll. The exes themselves must NOT import SDL2 directly.
+REQUIRED_PE_IMPORTS = {"avcodec-if-61.dll", "avutil-if-59.dll", "avdevice-if-61.dll"}
 FORBIDDEN_PE_IMPORTS = {"SDL2.dll"}
 PE_CHECKED_FILES = {"ffmpeg.exe", "ffprobe.exe"}
 
