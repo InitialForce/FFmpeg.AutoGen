@@ -34,11 +34,15 @@ FFMPEG_DIR = REPO_ROOT / "FFmpeg"
 PAYLOAD_DIR_NAME = "mingw64"
 INGESTED_SUBDIRS = ("bin", "include", "lib", "share")
 
-# PR #1 (11de7a5, "redist: drop ffplay/SDL2/openal, allowlist packed exes")
-# dropped these from FFmpeg/bin because their only consumer, ffplay.exe, is
-# not packed. Upstream bundles still ship all three; ingest must keep
-# dropping them so the committed tree doesn't regress.
-DROPPED_BIN_FILES = {"ffplay.exe", "SDL2.dll", "libopenal-1.dll"}
+# PR #1 (11de7a5) originally dropped ffplay.exe, SDL2.dll and libopenal-1.dll
+# together, on the assumption that ffplay.exe was their only consumer. That
+# assumption was wrong for SDL2/openal: avdevice-if-61.dll, hard-imported by
+# the packed ffmpeg.exe/ffprobe.exe, itself imports both, so dropping them
+# broke every spawned-exe code path (0xC0000135). Only ffplay.exe -- which
+# really is unpacked and has no other consumer -- stays excluded; upstream
+# bundles still ship it, so ingest must keep dropping it so the committed
+# tree doesn't regress.
+DROPPED_BIN_FILES = {"ffplay.exe"}
 
 # FFmpeg.AutoGen.Redist packs only these two executables (see the allowlist
 # in FFmpeg.AutoGen.Redist/FFmpeg.AutoGen.Redist.csproj); any other .exe in
@@ -198,13 +202,15 @@ def stage_ffmpeg_tree(payload_dir: Path, staging_root: Path) -> tuple[Path, set[
     Mirrors build/extract-ffmpeg.ps1's own bin/x64 reconstruction (all *.dll
     from bin/ copied into bin/x64/) so the generator-compatibility probe path
     (FFmpeg.AutoGen.CppSharpUnsafeGenerator + FFmpegBinariesHelper) keeps
-    working, while inheriting the trio-exclusion applied to bin/ itself.
+    working, while inheriting the ffplay.exe exclusion applied to bin/
+    itself. SDL2.dll/libopenal-1.dll flow into bin/x64/ like any other DLL --
+    they are load-bearing (avdevice imports them), not excluded.
 
     Returns (staged FFmpeg/ dir, subset of DROPPED_BIN_FILES actually present
     in the raw bundle). The dropped set is reported explicitly even when it
-    produces no tree diff -- FFmpeg/bin already excludes the trio since PR #1,
-    so a plain before/after diff wouldn't otherwise show that ingest is still
-    dropping them from every fresh bundle.
+    produces no tree diff -- FFmpeg/bin already excludes ffplay.exe since
+    PR #1, so a plain before/after diff wouldn't otherwise show that ingest
+    is still dropping it from every fresh bundle.
     """
     staged_ffmpeg = staging_root / "FFmpeg"
 
@@ -359,9 +365,7 @@ def format_size(n: int) -> str:
 
 
 def print_diff_report(current, staged, added, removed, changed) -> None:
-    expected_dropped = {f"FFmpeg/bin/{name}" for name in DROPPED_BIN_FILES} | {
-        f"FFmpeg/bin/x64/{name}" for name in ("SDL2.dll", "libopenal-1.dll")
-    }
+    expected_dropped = {f"FFmpeg/bin/{name}" for name in DROPPED_BIN_FILES}
 
     print()
     print("=== ingest diff report ===")
@@ -379,7 +383,7 @@ def print_diff_report(current, staged, added, removed, changed) -> None:
     undocumented_removed = [p for p in removed if p not in expected_dropped]
 
     if documented_removed:
-        print("-- removed (documented: ffplay/SDL2/openal trio + stale bin/x64 copies) --")
+        print("-- removed (documented: ffplay.exe exclusion) --")
         for p in documented_removed:
             print(f"  - {p} ({format_size(current[p][1])})")
 
@@ -402,8 +406,7 @@ def print_diff_report(current, staged, added, removed, changed) -> None:
     if undocumented_removed:
         print(
             "WARNING: undocumented removals present. Investigate before --apply; "
-            "this script will not silently drop anything beyond the ffplay/SDL2/openal "
-            "trio and the stale bin/x64 SDL2/openal copies."
+            "this script will not silently drop anything beyond ffplay.exe."
         )
 
 
@@ -451,7 +454,7 @@ def main() -> int:
             if dropped_from_bin:
                 print(
                     "Dropped during ingest (documented, PR #1 exclusion -- "
-                    "ffplay.exe's only consumer, not packed by Redist): "
+                    "not packed by Redist, no consumer in MotionCatalyst): "
                     + ", ".join(sorted(dropped_from_bin))
                 )
             missing_expected_drops = DROPPED_BIN_FILES - dropped_from_bin
@@ -480,7 +483,6 @@ def main() -> int:
             undocumented = [
                 p for p in removed
                 if p not in {f"FFmpeg/bin/{n}" for n in DROPPED_BIN_FILES}
-                and p not in {f"FFmpeg/bin/x64/{n}" for n in ("SDL2.dll", "libopenal-1.dll")}
             ]
 
             if not args.apply:

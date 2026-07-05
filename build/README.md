@@ -101,18 +101,26 @@ install hint rather than installing anything itself.
 
 ### What gets excluded
 
-`ffplay.exe`, `SDL2.dll`, and `libopenal-1.dll` exist in upstream bundles but
-are intentionally **not** committed (see PR #1, `11de7a5`): their only
-consumer, `ffplay.exe`, isn't packed by `FFmpeg.AutoGen.Redist`. The script
-drops all three during ingest and calls them out explicitly in the diff
-report as a documented delta, not silently.
+`ffplay.exe` exists in upstream bundles but is intentionally **not**
+committed (see PR #1, `11de7a5`): it isn't packed by `FFmpeg.AutoGen.Redist`
+and has no consumer in MotionCatalyst. The script drops it during ingest and
+calls it out explicitly in the diff report as a documented delta, not
+silently.
+
+`SDL2.dll` and `libopenal-1.dll` are **not** excluded, despite PR #1
+originally dropping them alongside `ffplay.exe` on the assumption that
+`ffplay.exe` was their only consumer. That assumption was wrong:
+`avdevice-if-61.dll`, hard-imported by the packed `ffmpeg.exe`/`ffprobe.exe`,
+itself imports both, so dropping them broke every spawned-exe code path with
+`0xC0000135` (regression against DESKTOP-12084). They're load-bearing and
+ingest keeps them everywhere ffplay.exe's exclusion doesn't apply.
 
 ### The `FFmpeg/bin/x64/` tree
 
 `FFmpeg/bin/` has two parallel DLL trees: the flat top-level `bin/` (what
 `FFmpeg.AutoGen.Redist.csproj` packs) and `bin/x64/` (the same DLLs, minus
-the two executables). This is **not** duplicate cruft -- it's a load-bearing
-legacy probe path:
+`ffplay.exe`). This is **not** duplicate cruft -- it's a load-bearing legacy
+probe path:
 
 - `build/generate-bindings.ps1`/`.sh` resolve `<BinariesPath>/x64` and pass it
   to `FFmpeg.AutoGen.CppSharpUnsafeGenerator` via `--bin`.
@@ -123,11 +131,9 @@ legacy probe path:
   library path.
 
 `ingest_bundle.py` reconstructs `bin/x64/` as a full copy of the ingested
-(already trio-filtered) `bin/*.dll` set, mirroring `extract-ffmpeg.ps1`'s own
-"copy DLLs to bin/x64 for generator compatibility" logic. Since PR #1 dropped
-`SDL2.dll`/`libopenal-1.dll` from top-level `bin/` but never touched
-`bin/x64/`, that directory had been silently stale since; ingest fixes this
-as a side effect of clean-replace (also reported as a documented delta).
+(ffplay.exe-filtered) `bin/*.dll` set, mirroring `extract-ffmpeg.ps1`'s own
+"copy DLLs to bin/x64 for generator compatibility" logic -- including
+`SDL2.dll`/`libopenal-1.dll`, since they're load-bearing there too.
 
 ### Sanity checks (always run, before any diff or write)
 
