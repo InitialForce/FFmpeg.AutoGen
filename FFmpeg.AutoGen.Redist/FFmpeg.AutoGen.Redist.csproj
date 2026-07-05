@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <PackageId>FFmpeg.AutoGen.Redist</PackageId>
-    <Version>7.1.2</Version>
+    <Version>7.1.3</Version>
     <Description>FFmpeg native binaries redistribution package</Description>
     <Copyright>Copyright © FFmpeg.AutoGen Contributors</Copyright>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
@@ -17,17 +17,20 @@
     <None Include="README.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
-  <!-- Ship the shared-linked FFmpeg DLLs. SDL2/openal are excluded: their only
-       consumer was ffplay.exe, which we no longer ship. -->
+  <!-- Ship the shared-linked FFmpeg DLLs. SDL2.dll and libopenal-1.dll are required:
+       avdevice-if-61.dll links against both, and avdevice-if-61.dll is a static import
+       of ffmpeg.exe and ffprobe.exe, so the Windows loader needs them next to the exe or
+       the process fails at startup with STATUS_DLL_NOT_FOUND (0xC0000135). ffplay.exe is
+       still dropped: it is the only binary we do not ship, and nothing else imports it. -->
   <ItemGroup>
-    <Content Include="../FFmpeg/bin/*.dll" Exclude="../FFmpeg/bin/SDL2.dll;../FFmpeg/bin/libopenal-1.dll" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../FFmpeg/bin/*.dll" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../FFmpeg/bin/ffmpeg.exe" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../FFmpeg/bin/ffprobe.exe" Pack="true" PackagePath="runtimes/win-x64/native/" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Copy binaries to output directory when building projects that reference this -->
   <ItemGroup>
-    <None Include="../FFmpeg/bin/*.dll" Exclude="../FFmpeg/bin/SDL2.dll;../FFmpeg/bin/libopenal-1.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../FFmpeg/bin/*.dll" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../FFmpeg/bin/ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../FFmpeg/bin/ffprobe.exe" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

@@ -1,3 +1,4 @@
+SDL2.dll
 avcodec-if-61.dll
 avdevice-if-61.dll
 avfilter-if-10.dll
@@ -41,6 +42,7 @@ libmodplug-1.dll
 libmp3lame-0.dll
 libnettle-8.dll
 libogg-0.dll
+libopenal-1.dll
 libopenjp2-7.dll
 libopus-0.dll
 libp11-kit-0.dll
