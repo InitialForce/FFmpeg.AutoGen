@@ -192,21 +192,29 @@ def read_pkginfo(extract_dir: Path) -> dict[str, str]:
     return {}
 
 
-def stage_ffmpeg_tree(payload_dir: Path, staging_root: Path) -> Path:
+def stage_ffmpeg_tree(payload_dir: Path, staging_root: Path) -> tuple[Path, set[str]]:
     """Build the desired post-ingest FFmpeg/ tree under staging_root/FFmpeg.
 
     Mirrors build/extract-ffmpeg.ps1's own bin/x64 reconstruction (all *.dll
     from bin/ copied into bin/x64/) so the generator-compatibility probe path
     (FFmpeg.AutoGen.CppSharpUnsafeGenerator + FFmpegBinariesHelper) keeps
     working, while inheriting the trio-exclusion applied to bin/ itself.
+
+    Returns (staged FFmpeg/ dir, subset of DROPPED_BIN_FILES actually present
+    in the raw bundle). The dropped set is reported explicitly even when it
+    produces no tree diff -- FFmpeg/bin already excludes the trio since PR #1,
+    so a plain before/after diff wouldn't otherwise show that ingest is still
+    dropping them from every fresh bundle.
     """
     staged_ffmpeg = staging_root / "FFmpeg"
 
     src_bin = payload_dir / "bin"
     dst_bin = staged_ffmpeg / "bin"
     dst_bin.mkdir(parents=True, exist_ok=True)
+    dropped_found: set[str] = set()
     for entry in sorted(src_bin.iterdir()):
         if entry.name in DROPPED_BIN_FILES:
+            dropped_found.add(entry.name)
             continue
         if entry.is_dir():
             # Upstream bundles ship a flat bin/ -- if a subdirectory somehow
@@ -230,7 +238,7 @@ def stage_ffmpeg_tree(payload_dir: Path, staging_root: Path) -> Path:
         if src.is_dir():
             shutil.copytree(src, dst)
 
-    return staged_ffmpeg
+    return staged_ffmpeg, dropped_found
 
 
 def run_sanity_checks(staged_ffmpeg: Path) -> list[str]:
@@ -427,7 +435,21 @@ def main() -> int:
                 print(f"  pkgname={pkginfo.get('pkgname', '?')} pkgver={pkginfo.get('pkgver', '?')}")
 
             staging_root = tmp / "staged"
-            staged_ffmpeg = stage_ffmpeg_tree(payload_dir, staging_root)
+            staged_ffmpeg, dropped_from_bin = stage_ffmpeg_tree(payload_dir, staging_root)
+
+            if dropped_from_bin:
+                print(
+                    "Dropped during ingest (documented, PR #1 exclusion -- "
+                    "ffplay.exe's only consumer, not packed by Redist): "
+                    + ", ".join(sorted(dropped_from_bin))
+                )
+            missing_expected_drops = DROPPED_BIN_FILES - dropped_from_bin
+            if missing_expected_drops:
+                print(
+                    "  note: bundle bin/ did not contain "
+                    + ", ".join(sorted(missing_expected_drops))
+                    + " -- nothing to drop for those"
+                )
 
             print("Running sanity checks...")
             errors = run_sanity_checks(staged_ffmpeg)
