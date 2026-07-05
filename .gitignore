@@ -1,6 +1,10 @@
 # Build Folders (you can keep bin if you'd like, to store dlls and pdbs)
 [Oo]bj/
 
+# Python
+__pycache__/
+*.pyc
+
 # mstest test results
 TestResults
 

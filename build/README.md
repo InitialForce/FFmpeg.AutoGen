@@ -72,6 +72,80 @@ This directory contains the automated build system for FFmpeg.AutoGen that proce
 ./build/create-packages.sh ./FFmpeg
 ```
 
+## Vendoring a Native FFmpeg Bundle (`scripts/ingest_bundle.py`)
+
+`FFmpeg/{bin,include,lib,share}` is vendored, committed binary content sourced
+from the MINGW64 **bundled** package variant published by
+[InitialForce/MINGW-packages](https://github.com/InitialForce/MINGW-packages)
+(`mingw-w64-x86_64-ffmpeg-if-bundled-<ver>-any.pkg.tar.zst` -- the same file
+committed at the repo root). Previously this was updated by hand-copying
+bundle contents into `FFmpeg/`, which is what caused a past stale-binary
+accident. `scripts/ingest_bundle.py` replaces that manual seam.
+
+```bash
+# From a local bundle file
+python3 scripts/ingest_bundle.py mingw-w64-x86_64-ffmpeg-if-bundled-7.1-1-any.pkg.tar.zst
+
+# Or download the bundled variant from a MINGW-packages release tag
+python3 scripts/ingest_bundle.py --from-release <tag>
+```
+
+Both forms default to a **dry run**: the bundle is extracted, sanity-checked,
+and diffed against the committed `FFmpeg/` tree, and a report is printed --
+nothing is written. Pass `--apply` to perform the actual clean-replace of
+`FFmpeg/{bin,include,lib,share}`.
+
+Requires `zstd` and `tar` on `PATH` (stdlib-only otherwise; no `zstandard`
+PyPI dependency). If `zstd` is missing the script fails fast with an
+install hint rather than installing anything itself.
+
+### What gets excluded
+
+`ffplay.exe`, `SDL2.dll`, and `libopenal-1.dll` exist in upstream bundles but
+are intentionally **not** committed (see PR #1, `11de7a5`): their only
+consumer, `ffplay.exe`, isn't packed by `FFmpeg.AutoGen.Redist`. The script
+drops all three during ingest and calls them out explicitly in the diff
+report as a documented delta, not silently.
+
+### The `FFmpeg/bin/x64/` tree
+
+`FFmpeg/bin/` has two parallel DLL trees: the flat top-level `bin/` (what
+`FFmpeg.AutoGen.Redist.csproj` packs) and `bin/x64/` (the same DLLs, minus
+the two executables). This is **not** duplicate cruft -- it's a load-bearing
+legacy probe path:
+
+- `build/generate-bindings.ps1`/`.sh` resolve `<BinariesPath>/x64` and pass it
+  to `FFmpeg.AutoGen.CppSharpUnsafeGenerator` via `--bin`.
+- `CliOptions.cs` defaults `FFmpegBinDir` to `<FFmpegDir>/bin/x64` when only
+  `-i`/`FFmpegDir` is given.
+- `FFmpeg.AutoGen.Example/FFmpegBinariesHelper.cs` probes `FFmpeg/bin/x64`
+  (or `bin/x86`) at runtime for the `DynamicallyLoaded` bindings' native
+  library path.
+
+`ingest_bundle.py` reconstructs `bin/x64/` as a full copy of the ingested
+(already trio-filtered) `bin/*.dll` set, mirroring `extract-ffmpeg.ps1`'s own
+"copy DLLs to bin/x64 for generator compatibility" logic. Since PR #1 dropped
+`SDL2.dll`/`libopenal-1.dll` from top-level `bin/` but never touched
+`bin/x64/`, that directory had been silently stale since; ingest fixes this
+as a side effect of clean-replace (also reported as a documented delta).
+
+### Sanity checks (always run, before any diff or write)
+
+- `ffmpeg.exe`/`ffprobe.exe` are under 5MB (confirms shared, not static, linking)
+- exactly one `<component>-if-<soversion>.dll` for each of avcodec, avdevice,
+  avfilter, avformat, avutil, swresample, swscale
+- no `x264`/`x265` byte-string markers in any shipped `.dll`/`.exe`
+  (`--disable-gpl` must mean no GPL codecs linked in)
+
+A doctored/corrupt bundle fails these checks and the script exits non-zero
+without touching `FFmpeg/`.
+
+### After `--apply`
+
+The script reminds you to:
+1. Bump `<Version>` in `FFmpeg.AutoGen.Redist/FFmpeg.AutoGen.Redist.csproj`
+2. Replace the committed bundle file(s) at the repo root with the new one(s)
+
 ## Build Outputs
 
 ### Generated Bindings
